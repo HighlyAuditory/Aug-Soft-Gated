@@ -6,10 +6,10 @@ import numpy as np
 from torch.autograd import Variable
 import torch.nn.functional as F
 from .geo.geotnf.transformation import GeometricTnf
-from u_res_net import UResNet, UResNetLast
-from warp_res_net_aff_tps import WarpResGenerator as WarpResGenerator_AFFTPS
-from res_net import ResGenerator
-from u_net import UnetGenerator
+from .u_res_net import UResNet, UResNetLast
+from .warp_res_net_aff_tps import WarpResGenerator as WarpResGenerator_AFFTPS
+from .res_net import ResGenerator
+from .u_net import UnetGenerator
 
 def define_G(input_nc, output_nc, which_G='wapResNet_v3_afftps'):
     if which_G == 'wapResNet_v3_afftps':
@@ -76,7 +76,7 @@ class ResidualBlock(nn.Module):
     def warp(self, x, theta_aff, theta_aff_tps):
         #print x.shape
         resizeTgt = GeometricTnf(out_h=x.shape[2], out_w=x.shape[3], use_cuda=self.use_cuda)
-        print theta_aff.shape
+        print (theta_aff.shape)
         warped_x_aff = self.affTnf(x, theta_aff.view(-1, 2, 3))
         warped_x_aff_tps = self.tpsTnf(warped_x_aff, theta_aff_tps)
 

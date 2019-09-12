@@ -13,16 +13,17 @@ class SemanticAlignModel(BaseModel):
     def name(self):
         return 'SemanticAlignModel'
 
-    def initialize(self, opt):
+    def initialize(self, opt, which_G):
         BaseModel.initialize(self, opt)
         if opt.resize_or_crop != 'none': # when training at full res this causes OOM
             torch.backends.cudnn.benchmark = True
         self.isTrain = opt.isTrain
+        self.which_epoch = 40
 
         # Generator network
         netG_input_nc = 3 + 18 + 2*opt.parsing_label_nc   ### a_parsing_label and b_parsing_label
         output_nc = opt.output_nc
-        self.netG = networks.define_G(netG_input_nc, output_nc, which_G=opt.which_G)
+        self.netG = networks.define_G(netG_input_nc, output_nc, which_G=which_G)
 
         # Discriminator network
         if self.isTrain:
@@ -39,11 +40,11 @@ class SemanticAlignModel(BaseModel):
         # load networks
         if not self.isTrain or opt.continue_train or opt.load_pretrain:
             pretrained_path = '' if not self.isTrain else opt.load_pretrain
-            print ("pretrained_path = {}, epoch {}".format(pretrained_path, opt.which_epoch))
+            print ("pretrained_path = {}, epoch {}".format(pretrained_path, self.which_epoch))
 
-            self.load_network(self.netG, 'G', opt.which_epoch, pretrained_path)
+            self.load_network(self.netG, 'G', self.which_epoch, pretrained_path)
             if self.isTrain:
-                self.load_network(self.netD, 'D', opt.which_epoch, pretrained_path)
+                self.load_network(self.netD, 'D', self.which_epoch, pretrained_path)
 
 
         # set loss functions and optimizers
@@ -74,6 +75,8 @@ class SemanticAlignModel(BaseModel):
             # optimizer D
             params_D = list(self.netD.parameters())
             self.optimizer_D = torch.optim.Adam(params_D, lr=opt.lr, betas=(opt.beta1, 0.999))
+
+            print("models [%s] was created" % (self.name()))
 
     def encode_input(self, inputs, infer=False):
         a_image_tensor = inputs.data[:, 0:3, :, :]      #3
@@ -153,8 +156,6 @@ class SemanticAlignModel(BaseModel):
 
         return fake_image
 
-
-
     def get_GAN_losses(self, netD, input_label, real_image, fake_image):
         loss_D_fake, loss_D_real, loss_G_GAN, loss_G_GAN_Feat = self.getZero(), self.getZero(), self.getZero(), self.getZero()
 
@@ -183,8 +184,6 @@ class SemanticAlignModel(BaseModel):
                     # print "================="
 
         return loss_D_real, loss_D_fake, loss_G_GAN, loss_G_GAN_Feat
-
-
 
     def getZero(self):
         return Variable(torch.cuda.FloatTensor([0]))

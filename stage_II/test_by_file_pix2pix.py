@@ -69,7 +69,7 @@ def test_paper_img(tag='nips_cvpr'):
 
 
     pairs = get_paper_testpairs(path)
-    for i in xrange(len(pairs)):
+    for i in range(len(pairs)):
         p = pairs[i]
         if tag == 'nips_cvpr' or tag == 'ablation':
             img_a = p[0]

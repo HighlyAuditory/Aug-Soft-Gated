@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import cv2 as cv
 from data.base_dataset import get_transform, get_params
-from draw_point_by_json import *
+from .draw_point_by_json import *
 from util.util import parsing2im, CV2PIL
 from PIL import Image
 from torch.autograd import Variable

@@ -2,23 +2,23 @@ CUDA_VISIBLE_DEVICES=0  python ./rebuttal/test_I_II_multi_pose_penn.py --name I_
 
 CUDA_VISIBLE_DEVICES=0  python ./rebuttal/test_I_II.py --name I_II --dataroot ~/Downloads/semantic_align_gan_v9/datasets/deepfashion/paper_images/256/JOINT/deepfasion/00013/id_00000390 --stage 12 --gpu_ids=0 --parsing_label_nc 20 --how_many 80 --pairs_path ./datasets/deepfashion/In-shop_AB_HD_p1024/Anno/my_test_stage_I.txt
 
-CUDA_VISIBLE_DEVICES=0  python2 ./rebuttal/test_I_II_multi_pose_penn.py --name I_II --dataroot ./ --pairs_path ./rebuttal/penn_image_list_20180730.txt --stage 123 --gpu_ids=0 --parsing_label_nc 20 --pose_file_path ./rebuttal/penn_pose_sequence_20180730.txt --how_many 50 --resize_or_crop resize_and_crop | rescale_with
+CUDA_VISIBLE_DEVICES=0  python ./rebuttal/test_I_II_multi_pose_penn.py --name I_II --dataroot ./ --pairs_path ./rebuttal/penn_image_list_20180730.txt --stage 123 --gpu_ids=0 --parsing_label_nc 20 --pose_file_path ./rebuttal/penn_pose_sequence_20180730.txt --how_many 50 --resize_or_crop resize_and_crop | rescale_with
 
 # stage I
-CUDA_VISIBLE_DEVICES=0 python2 ./stage_I/train.py --name stage_I_gan_ganFeat_noL1_oneD_Parsing_bz50_parsing20_20190409_debug --dataroot /home/wenwens/Datasets/DeepFashion/paper_img --batchSize 2 --stage 1 --tf_log --no_L1_loss --num_D 1 --no_TV_loss  --no_flip --gpu_ids=0 --parsing_label_nc 20
+CUDA_VISIBLE_DEVICES=0 python ./stage_I/train.py --name stage_I_gan_ganFeat_noL1_oneD_Parsing_bz50_parsing20_20190409_debug --dataroot /home/wenwens/Datasets/DeepFashion/paper_img --batchSize 2 --stage 1 --tf_log --no_L1_loss --num_D 1 --no_TV_loss  --no_flip --gpu_ids=0 --parsing_label_nc 20
 
 # stage II (original batch size is 12)
-CUDA_VISIBLE_DEVICES=0  python2 ./stage_II/train.py --name gan_L1_feat_vgg_notv_noparsing_afftps_05091451 --dataroot /home/wenwens/Datasets/DeepFashion/paper_img --batchSize 2 --stage 2 --tf_log --gpu_ids=0 --no_flip --which_G wapResNet_v3_afftps --parsing_label_nc 20 --no_TV_loss --num_D 1 --no_Parsing_loss --pairs_path ./datasets/deepfashion/In-shop_AB_HD_p1024/Anno/my_train_pairs_deepfashion_stage_II.txt
+CUDA_VISIBLE_DEVICES=0  python ./stage_II/train.py --name gan_L1_feat_vgg_notv_noparsing_afftps_05091451 --dataroot /home/wenwens/Datasets/DeepFashion/paper_img --batchSize 2 --stage 2 --tf_log --gpu_ids=0 --no_flip --which_G wapResNet_v3_afftps --parsing_label_nc 20 --no_TV_loss --num_D 1 --no_Parsing_loss --pairs_path ./datasets/deepfashion/In-shop_AB_HD_p1024/Anno/my_train_pairs_deepfashion_stage_II.txt
 
 # Soft-Gated
 # test stage I and II
-CUDA_VISIBLE_DEVICES=0  python2 ./rebuttal/test_I_II.py --name I_II --dataroot /home/wenwens/Datasets/DeepFashion/paper_img  --stage 12 --gpu_ids=0 --parsing_label_nc 20 --how_many 80
+CUDA_VISIBLE_DEVICES=0  python ./rebuttal/test_I_II.py --name I_II --dataroot /home/wenwens/Datasets/DeepFashion/paper_img  --stage 12 --gpu_ids=0 --parsing_label_nc 20 --how_many 80
 # test stage I
-CUDA_VISIBLE_DEVICE=0 python2 ./stage_I/test_all_parsing_label.py --name stage_I_gan_ganFeat_noL1_oneD_Parsing_bz50_parsing20_04222 --dataroot /home/wenwens/Datasets/DeepFashion/paper_img --stage 1 --which_img all --which_epoch 100 --parsing_label_nc 20 --how_many 10000000 --phase test
+CUDA_VISIBLE_DEVICE=0 python ./stage_I/test_all_parsing_label.py --name stage_I_gan_ganFeat_noL1_oneD_Parsing_bz50_parsing20_04222 --dataroot /home/wenwens/Datasets/DeepFashion/paper_img --stage 1 --which_img all --which_epoch 100 --parsing_label_nc 20 --how_many 10000000 --phase test
 # stage I tested with paper imgs, results in ./results/stage_I_gan_ganFeat_noL1_oneD_Parsing_bz50_parsing20_04222/test_100/images
 
 # test stage II
-CUDA_VISIBLE_DEVICES=0 python2 ./stage_II/test_all.py --name --name gan_L1_feat_vgg_notv_noparsing_afftps_05102228 --dataroot /home/wenwens/Datasets/DeepFashion/paper_img --stage 2 --gpu_ids=0 --which_G wapResNet_v3_afftps --which_img all --which_epoch 40 --parsing_label_nc 20 --how_many 80
+CUDA_VISIBLE_DEVICES=0 python ./stage_II/test_all.py --name gan_L1_feat_vgg_notv_noparsing_afftps_05102228 --dataroot /home/wenwens/Datasets/DeepFashion/paper_img --stage 2 --gpu_ids=0 --which_G wapResNet_v3_afftps --which_img all --which_epoch 40 --parsing_label_nc 20 --how_many 80
 # stage II tested with paper imgs, results in ./results/gan_L1_feat_vgg_notv_noparsing_afftps_05102228/test_40/images
 
 # stage I training

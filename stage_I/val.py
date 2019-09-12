@@ -35,7 +35,7 @@ def get_test_result(a_jpg_path, b_jpg_path, model, opt):
 def get_valList(model, opt):
     val_list = []
     lines = open("./datasets/deepfashion/paper_images/256/val_img_path.txt").readlines()
-    for i in xrange(len(lines)):
+    for i in range(len(lines)):
         image_a_path, image_b_path = lines[i].split()[0], lines[i].split()[1]
         a_jpg_path = os.path.join(opt.dataroot, image_a_path)
         b_jpg_path = os.path.join(opt.dataroot, image_b_path)

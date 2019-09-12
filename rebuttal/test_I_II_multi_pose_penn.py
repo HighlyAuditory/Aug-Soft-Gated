@@ -79,7 +79,7 @@ def main():
 
         test_list = []
         b_json_path_list = get_pose_seq_list(opt)
-        for j in xrange(len(b_json_path_list)):
+        for j in range(len(b_json_path_list)):
             b_json_path = b_json_path_list[j]
             b_label_tensor, b_label_show_tensor = get_label_tensor(b_json_path, b_jpg_path[0], opt)
             b_label_tensor = b_label_tensor.unsqueeze_(0)

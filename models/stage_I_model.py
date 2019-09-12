@@ -11,15 +11,16 @@ class Stage_I_Model(BaseModel):
     def name(self):
         return 'Stage_I_Model'
 
-    def initialize(self, opt):
+    def initialize(self, opt, which_G):
         BaseModel.initialize(self, opt)
         if opt.resize_or_crop != 'none':            # when training at full res this causes OOM
             torch.backends.cudnn.benchmark = True
         self.isTrain = opt.isTrain
+        self.which_epoch = 100
 
         netG_input_nc = self.opt.parsing_label_nc + 18
         output_nc = self.opt.parsing_label_nc
-        self.netG = networks.define_G(netG_input_nc, output_nc, which_G=opt.which_G)
+        self.netG = networks.define_G(netG_input_nc, output_nc, which_G=which_G)
         # Discriminator network
         if self.isTrain:
             use_sigmoid = opt.no_lsgan
@@ -34,9 +35,9 @@ class Stage_I_Model(BaseModel):
         # load networks
         if not self.isTrain or opt.continue_train or opt.load_pretrain:
             pretrained_path = '' if not self.isTrain else opt.load_pretrain
-            self.load_network(self.netG, 'G', opt.which_epoch, pretrained_path)
+            self.load_network(self.netG, 'G', self.which_epoch, pretrained_path)
             if self.isTrain:
-                self.load_network(self.netD, 'D', opt.which_epoch, pretrained_path)
+                self.load_network(self.netD, 'D', self.which_epoch, pretrained_path)
 
         # set loss functions and optimizers
         if self.isTrain:
@@ -61,6 +62,8 @@ class Stage_I_Model(BaseModel):
             # optimizer D
             params_D = list(self.netD.parameters())
             self.optimizer_D = torch.optim.Adam(params_D, lr=opt.lr, betas=(opt.beta1, 0.999))
+
+            print("models [%s] was created" % (self.name()))
 
     ### old before 20190409
     # def label2onhot(self, b_parsing_tensor):

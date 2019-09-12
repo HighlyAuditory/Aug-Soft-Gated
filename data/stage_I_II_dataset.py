@@ -26,7 +26,6 @@ class Stage_I_II_Dataset(BaseDataset):
 
     def __getitem__(self, index):
         a_jpg_path, b_jpg_path, a_parsing_path, b_json_path = self.get_paths(index)
-        print("value")
         print(b_json_path)
         b_label_tensor, b_label_show_tensor = get_label_tensor(b_json_path, b_jpg_path, self.opt)
 

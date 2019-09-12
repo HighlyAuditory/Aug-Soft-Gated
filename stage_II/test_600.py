@@ -115,7 +115,7 @@ def test_paper_img(tag='nips_cvpr'):
 
 
     pairs = get_paper_testpairs(path)
-    for i in xrange(len(pairs)):
+    for i in range(len(pairs)):
         p = pairs[i]
         if tag == 'nips_cvpr' or tag == 'ablation':
             img_a = p[0]
@@ -175,7 +175,7 @@ def write_pairs(pairs, paper_tag):
     web_dir = os.path.join(opt.results_dir, opt.name, paper_tag, '%s_%s' % (opt.phase, opt.which_epoch))
     webpage = html.HTML(web_dir, 'Experiment = %s, Phase = %s, Epoch = %s' % (opt.name, opt.phase, opt.which_epoch))
 
-    for i in xrange(len(pairs)):
+    for i in range(len(pairs)):
         p = pairs[i]
         img_a = p[0]
         img_b = p[1]
@@ -298,7 +298,7 @@ def test_paper_img_nips_cvpr_mk():
 
 
     pairs = get_paper_testpairs(path)
-    for i in xrange(len(pairs)):
+    for i in range(len(pairs)):
         p = pairs[i]
         img_a = p[0]
         img_b = p[1]

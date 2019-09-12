@@ -22,7 +22,7 @@ def get_points(path):
 def draw_points(point_list, size=(256, 256), r= 4):
     img_blank = Image.new('RGB', size)
     img_draw = ImageDraw.Draw(img_blank)
-    for i in xrange(0, len(point_list), 3):
+    for i in range(0, len(point_list), 3):
         x,  y = point_list[i], point_list[i+1]
         if x == 0 and y == 0:
             continue
@@ -33,7 +33,7 @@ def draw_points(point_list, size=(256, 256), r= 4):
 def draw_18chnl_points(point_list, transform, num_chnl=18, size=(256, 256), r = 4):
     pose_18map = torch.zeros(num_chnl, size[0], size[1])
     map_index = 0
-    for i in xrange(0, len(point_list), 3):
+    for i in range(0, len(point_list), 3):
         img = Image.new('RGB', size)
         draw = ImageDraw.Draw(img)
         x, y = point_list[i], point_list[i + 1]

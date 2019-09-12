@@ -26,7 +26,7 @@ opt.no_flip = True  # no flip
 
 data_loader = CreateDataLoader(opt)
 dataset = data_loader.load_data()
-model = create_model(opt)
+model = create_model(opt, 'wapResNet_v3_afftps')
 visualizer = Visualizer(opt)
 dataset_size = len(data_loader)
 print('#testing images = %d' % dataset_size)

@@ -2,7 +2,7 @@
 ### Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
 import torch
 
-def create_model(opt):
+def create_model(opt, name):
     if opt.stage == 1:
         from .stage_I_model import Stage_I_Model
         model = Stage_I_Model()
@@ -16,7 +16,7 @@ def create_model(opt):
         print ("create model ERROR!!!")
 
 
-    model.initialize(opt)
+    model.initialize(opt, name)
     print("models [%s] was created" % (model.name()))
 
     if opt.isTrain and len(opt.gpu_ids):
