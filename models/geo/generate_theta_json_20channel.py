@@ -8,7 +8,7 @@ import pdb
 # 从pair文件里面读取，然后一对文件名作为一个key
 
 #pair_file_path = "./datasets/deepfashion/In-shop_AB_HD_p1024/Anno/list_landmarks_inshop_filterAll_by_jsonpoint_pairs_mvoneId_0118.txt"
-
+# sys.path.append("~/Downloads/semantic_align_gan_v9/models") 
 
 
 def generate_theta(pair_file_path, root_path, geo):

@@ -23,7 +23,7 @@ class Augment_Dataset(BaseDataset):
         self.root = opt.dataroot
         self.path_pairs = self.get_path_pairs(opt.pairs_path, opt.phase)
         
-        print("_-------pairs path={}".format(opt.pairs_path))
+        # print("_-------pairs path={}".format(opt.pairs_path))
         if not opt.serial_batches:
             random.shuffle(self.path_pairs)
             ### testing的时候设置了opt.serial_batches=True,所以random12800,得shuffle一下文件行不然都是前面的men了

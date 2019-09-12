@@ -12,7 +12,7 @@ line_index_list = [[(16, 14), (14, 0), (0, 15), (15, 17)], [(8, 2), (2, 1), (1, 
                    [(2, 3), (3, 4)], [(5, 6), (6, 7)], [(8, 9), (9, 10)], [(11, 12), (12, 13)]]
 
 def get_points(path):
-    print(path)
+    
     data = json.load(open(path))
     peoples = data['people']
     point_list = peoples[0]['pose_keypoints'] if len(peoples) > 0 else [0] * 54

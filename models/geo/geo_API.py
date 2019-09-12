@@ -5,9 +5,9 @@ from __future__ import print_function, division
 # import argparse
 import torch
 import torch.nn as nn
-from model.cnn_geometric_model import CNNGeometric
-from image.normalization import NormalizeImageDict, normalize_image
-from geotnf.transformation import GeometricTnf
+from .model.cnn_geometric_model import CNNGeometric
+from .image.normalization import NormalizeImageDict, normalize_image
+from .geotnf.transformation import GeometricTnf
 # from geotnf.point_tnf import *
 from skimage import io
 import warnings
@@ -16,6 +16,7 @@ from collections import OrderedDict
 
 import numpy as np
 from torch.autograd import Variable
+import pdb
 
 warnings.filterwarnings('ignore')
 
@@ -24,7 +25,7 @@ class GeoAPI(nn.Module):
         super(GeoAPI, self).__init__()
         self.use_cuda = torch.cuda.is_available()
 
-        self.resizeCNN = GeometricTnf(out_h=240, out_w=240, use_cuda=False)
+        self.resizeCNN = GeometricTnf(out_h=240, out_w=240).cuda()
         #normalizeTnf = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
         self.tpsTnf = GeometricTnf(geometric_model='tps', use_cuda=self.use_cuda)
@@ -94,12 +95,10 @@ class GeoAPI(nn.Module):
 
         resizeTgt = GeometricTnf(out_h=target_image.shape[0], out_w=target_image.shape[1], use_cuda=self.use_cuda)
 
-
         ### 如果传入的本来就是正则化、var处理过的，则跳过
         source_image_var = self.preprocess_image(source_image)
         target_image_var = self.preprocess_image(target_image)
         a_image_var = self.preprocess_image(a_image)
-
 
         if self.use_cuda:
             source_image_var = source_image_var.cuda()
@@ -142,7 +141,7 @@ class GeoAPI(nn.Module):
 
         source_image = io.imread(source_image_path)
         target_image = io.imread(target_image_path)
-
+        pdb.set_trace()
         resizeTgt = GeometricTnf(out_h=target_image.shape[0], out_w=target_image.shape[1], use_cuda=self.use_cuda)
 
         ### 如果传入的本来就是正则化、var处理过的，则跳过
@@ -154,7 +153,7 @@ class GeoAPI(nn.Module):
             target_image_var = target_image_var.cuda()
 
         batch = {'source_image': source_image_var, 'target_image': target_image_var}
-
+        pdb.set_trace()
         theta_aff = self.model_aff.forward(batch)
         warped_image_aff = self.affTnf(batch['source_image'], theta_aff.view(-1, 2, 3))
 
@@ -166,6 +165,27 @@ class GeoAPI(nn.Module):
 
         return theta_aff, theta_tps, theta_aff_tps
 
+    def get_thetas_from_image(self, source_image, target_image):
+        # source_image_var = self.preprocess_image(source_image)
+        # target_image_var = self.preprocess_image(target_image)
+        # pdb.set_trace()
+        source_image_var = self.resizeCNN(source_image)
+        target_image_var = self.resizeCNN(target_image)
+        
+        source_image = source_image_var.cuda()
+        target_image = source_image_var.cuda()
+
+        resizeTgt = GeometricTnf(out_h=target_image.shape[0], out_w=target_image.shape[1], use_cuda=self.use_cuda)        
+
+        batch = {'source_image': source_image, 'target_image': target_image}
+
+        theta_aff = self.model_aff.forward(batch)
+        warped_image_aff = self.affTnf(batch['source_image'], theta_aff.view(-1, 2, 3))
+
+        theta_tps = self.model_tps.forward(batch)
+        theta_aff_tps = self.model_tps.forward({'source_image': warped_image_aff, 'target_image': batch['target_image']})
+
+        return theta_aff, theta_tps, theta_aff_tps
 
 
 

@@ -296,6 +296,29 @@ def get_theta_grid_from_json(theta_json, affTnf, tpsInf, tag='aff_tps'):
 
     return theta_tensor
 
+def get_theta_grid_from_tensor(theta_tensor, affTnf, tpsTnf, tag):
+    if tag == 'aff':
+        grid = affTnf.get_grid(Variable(theta_tensor.view(-1, 2, 3)))  # (1, 240, 240, 2)
+    else:
+        # theta_tensor = theta_tensor.unsqueeze(0)
+        grid = tpsTnf.get_grid(Variable(theta_tensor))  # (1, 240, 240, 2)
+
+    b, c, h, w = grid.shape
+    theta_len = b * c * h * w
+    theta_tmp = grid.view(theta_len)
+
+    import torch.nn.functional as F
+    grid_p = F.pad(theta_tmp, (0, 256*256*2-240*240*2))
+    theta_tensor = grid_p.view(2,256,256)
+
+    return theta_tensor
+
+def get_theta_affgrid_by_tensor(affTnf, tpsTnf, theta_aff_tensor, theta_tps_tensor, theta_aff_tps_tensor):
+    theta_aff_tensor = get_theta_grid_from_tensor(theta_aff_tensor, affTnf, tpsTnf, tag='aff')
+    theta_tps_tensor = get_theta_grid_from_tensor(theta_tps_tensor, affTnf, tpsTnf, tag='tps')
+    theta_aff_tps_tensor = get_theta_grid_from_tensor(theta_aff_tps_tensor, affTnf, tpsTnf, tag='aff_tps')
+    return theta_aff_tensor, theta_tps_tensor, theta_aff_tps_tensor
+
 def get_thetas_affgrid_tensor(affTnf, tpsTnf, theta_json_data, theta_pair_key):
     theta_json = theta_json_data[theta_pair_key]
     theta_aff_tensor = get_theta_grid_from_json(theta_json, affTnf, tpsTnf, tag='aff')

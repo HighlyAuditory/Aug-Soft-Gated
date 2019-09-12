@@ -216,3 +216,9 @@ class SemanticAlignModel(BaseModel):
             param_group['lr'] = lr
         print('update learning rate: %f -> %f' % (self.old_lr, lr))
         self.old_lr = lr
+
+    def forward_without_loss(self, inputs, infer):
+        input_var, theta_aff_var, theta_tps_var, theta_aff_tps_var = self.encode_input(inputs)
+        fake_image = self.netG.forward(input_var, theta_aff_var, theta_tps_var, theta_aff_tps_var)
+
+        return fake_image

@@ -14,6 +14,7 @@ from .good_order_cood_angle_convert import anglelimbtoxyz2, check_visibility
 from . import heatmap_pose
 from torch.autograd import Variable
 from util.util import parsingim_2_tensor
+from data.utils import get_theta_affgrid_by_tensor
 
 def cords_to_map_yx(cords, img_size, sigma=6):
     MISSING_VALUE = -1
@@ -81,7 +82,7 @@ class AugmentModel(BaseModel):
             if not opt.no_TV_loss:
                 self.criterionTV = losses.TVLoss()
 
-            self.loss_names = ['L1_parse', 'G_VGG', 'G_L1', 'G_TV', 'G_Parsing']
+            self.loss_names = ['D_real', 'D_fake', 'G_GAN', 'G_GAN_Feat', 'G_VGG', 'G_L1', 'G_TV', 'G_Parsing']
 
             # initialize optimizers
             # optimizer G
@@ -162,29 +163,30 @@ class AugmentModel(BaseModel):
 
         a_parse = parse_input[:,:20]        
         a_parsing_rgb_tensor = parsingim_2_tensor(a_parse[0], opt=self.opt, parsing_label_nc=self.parsing_label_nc)
-        b_parsing_rgb_tensor = parsingim_2_tensor(fake_b_parse[0], opt=self.opt, parsing_label_nc=self.parsing_label_nc)
+        fake_b_parsing_rgb_tensor = parsingim_2_tensor(fake_b_parse[0], opt=self.opt, parsing_label_nc=self.parsing_label_nc)
 
-        theta_tensors = self.get_geo(a_parse, fake_b_parse)
+        theta_tensors = self.get_geo(a_parsing_rgb_tensor, fake_b_parsing_rgb_tensor)
         main_input_final = torch.cat([main_input, fake_b_parse, theta_tensors], dim=1   )
         # self.main_model.netG.zero_grad()
-        b_prediction = self.main_model.forward_without_loss(main_input_final, False)
+        b_prediction = self.main_model.inference(main_input_final)
 
-        fake_p2_padded = heatmap_pose.preprocess(b_prediction, [256, 176])
-        heatmap = heatmap_pose.process(self.cpm_model, fake_p2_padded, self.mask)
+        reparsing_loss=self.criterionParsingLoss.getSemiParsingLoss(b_prediction, fake_b_parse) * self.opt.lambda_Parsing
+        # this is for skeleton supervision
+        # fake_p2_padded = heatmap_pose.preprocess(b_prediction, [256, 256])
+        # heatmap = heatmap_pose.process(self.cpm_model, fake_p2_padded, self.mask)
 
-        # \wenwen{use skeleton loss}
+
         # parse_b = aug_input[:,:20]
         # parse_a_input = torch.cat((parse_b, aug_input[:,:18]), dim=1)
-        # fake_a_parse = self.parse_model.inference(parse_a_input)
-        t = Variable(self.input_BP_res, requires_grad=False)
-        pl = self.pose_loss(torch.clamp(self.heat6, min=0, max=1), t)*self.opt.lambda_pose
-        reparsing_loss = self.criterionL1(fake_a_parse, parse_input[:,:20])
+        # t = Variable(self.input_BP_res, requires_grad=False)
+        # pl = self.pose_loss(torch.clamp(self.heat6, min=0, max=1), t)*self.opt.lambda_pose
+        # reparsing_loss = self.criterionL1(fake_a_parse, parse_input[:,:20])
 
         return b_prediction, reparsing_loss    
 
     def forward_target(self, inputs, infer):
         self.net_SK.train()
-        parse_input, aug_input, main_input = self.encode_input(inputs) 
+        parse_input, main_input = self.encode_input(inputs) 
         fake_b_parse = self.parse_model.inference(parse_input)
 
         a_parse = parse_input[:,:20]        
@@ -193,6 +195,12 @@ class AugmentModel(BaseModel):
 
         theta_tensors = self.get_geo(a_parsing_rgb_tensor, b_parsing_rgb_tensor)
         main_input_final = torch.cat([main_input, fake_b_parse, theta_tensors], dim=1)
-        b_prediction = self.main_model.forward_without_loss(main_input_final, False)
+        target_loss, b_prediction = self.main_model.forward(main_input_final, False)
 
-        return b_prediction, reparsing_loss
+        losses = [ torch.mean(x) if not isinstance(x, int) else x for x in target_loss ]
+        loss_dict = dict(zip(self.loss_names, losses))
+
+        # loss_D = (loss_dict['D_real'] + loss_dict['D_fake']) * 0.5
+        loss_G = loss_dict['G_GAN']  + loss_dict['G_L1'] + loss_dict['G_VGG'] + loss_dict['G_TV'] + loss_dict['G_GAN_Feat'] + loss_dict['G_Parsing']
+
+        return b_prediction, loss_G

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 # from models.parsing_loss.res_net import ResGenerator
-from res_net import ResGenerator
+from .res_net import ResGenerator
 
 class ParsingCrossEntropyLoss(nn.Module):
     def __init__(self, tensor=torch.FloatTensor):
@@ -32,7 +32,13 @@ class ParsingCrossEntropyLoss(nn.Module):
 def load_network(network, save_dir, network_label, epoch_label):
     save_filename = '%s_net_%s.pth' % (epoch_label, network_label)
     save_path = os.path.join(save_dir, save_filename)
-    network.load_state_dict(torch.load(save_path))
+    model_dict = torch.load(save_path)
+    model_dict_clone = model_dict.copy()
+    for key, value in model_dict_clone.items():
+        if key.endswith(('running_mean', 'running_var')):
+            del model_dict[key]
+
+    network.load_state_dict(model_dict, strict=False)
 
 class ParsingLoss(nn.Module):
     def __init__(self):
@@ -48,8 +54,14 @@ class ParsingLoss(nn.Module):
         load_network(self.model, save_dir, 'G', which_epoch)
 
     def getParsingLoss(self, img_1, img_2):
-        img_1_parsing = self.model.forward(img_1)
+        img_1_parsing = self.model.forward(img_1) # channel?
         img_2_parsing = self.model.forward(img_2)
+        loss_G_parsing = self.criterionParsingLoss(img_1_parsing, img_2_parsing)
+        #loss_G_parsing = self.criterionL1(Variable(img_1_parsing.data), Variable(img_2_parsing.data))
+        return loss_G_parsing
+
+    def getSemiParsingLoss(self, img_1, img_2_parsing):
+        img_1_parsing = self.model.forward(img_1)
         loss_G_parsing = self.criterionParsingLoss(img_1_parsing, img_2_parsing)
         #loss_G_parsing = self.criterionL1(Variable(img_1_parsing.data), Variable(img_2_parsing.data))
         return loss_G_parsing

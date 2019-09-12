@@ -72,7 +72,7 @@ def __make_power_2(img, base, method=Image.BICUBIC):
     return img.resize((w, h), method)
 
 def __scale_width(img, target_width, method=Image.BICUBIC):
-    ow, oh = img.size
+    ow, oh = 256, 256
     if (ow == target_width):
         return img    
     w = target_width
