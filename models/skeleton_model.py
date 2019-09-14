@@ -16,7 +16,7 @@ class Skeleton_Model(BaseModel):
     def __init__(self, opt):
         super(Skeleton_Model, self).__init__()
         BaseModel.initialize(self, opt)
-        self.alpha = Variable(torch.randn((1,7,1)), requires_grad=True)
+        self.alpha = Variable(torch.randn((1,7,1), device="cuda"), requires_grad=True)
 
         if not self.isTrain or opt.continue_train:
             which_epoch = opt.which_epoch
@@ -28,7 +28,7 @@ class Skeleton_Model(BaseModel):
                 print(alpha_path)
 
     def forward(self, input1, input2):
-        self.alpha_clipped = torch.clamp(self.alpha, 0.0, 1.0).cuda()
+        self.alpha_clipped = torch.clamp(self.alpha, 0.0, 1.0)
         # self.alpha_clipped = self.alpha
         out = self.alpha_clipped * input1 + (1 - self.alpha_clipped) * input2
         return out

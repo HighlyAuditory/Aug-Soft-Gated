@@ -229,33 +229,6 @@ def get_image_tensor(jpg_path, opt):
 
     return image_tensor
 
-# def get_parsing_image_RGB(parsing_path, jpg_path, opt):
-#     image = Image.open(jpg_path).convert('RGB')
-#     params = get_params(opt, image.size)
-#     transform = get_transform(opt, params)
-#     image_tensor = transform(image)
-#
-#     parsing_label = get_parsing_tensor(parsing_path)
-#     parsing_image = parsing2im(parsing_label)
-#     parsing_image = CV2PIL(parsing_image)
-#     parsing_rgb_tensor = transform(parsing_image)
-#
-#     return parsing_rgb_tensor, image_tensor
-#
-# def get_parsing_image_RGB_2(parsing_path, jpg_path, opt):
-#     image = Image.open(jpg_path).convert('RGB')
-#     params = get_params(opt, image.size)
-#     transform = get_transform(opt, params)
-#     # image_tensor = transform(image)
-#
-#     parsing_label = get_parsing_tensor(parsing_path)
-#     parsing_image = parsing2im(parsing_label)
-#     parsing_image = CV2PIL(parsing_image)
-#     parsing_rgb_tensor = transform(parsing_image)
-#
-#     return parsing_rgb_tensor
-
-
 def get_theta_from_json(theta_json, tag='aff_tps'):
     theta_list_0 = theta_json[tag]
     theta_len = len(theta_list_0)
@@ -276,7 +249,7 @@ def get_thetas_tensor(theta_json_data, theta_pair_key):
 
     return theta_aff_tensor, theta_tps_tensor, theta_aff_tps_tensor
 
-
+import pdb
 def get_theta_grid_from_json(theta_json, affTnf, tpsInf, tag='aff_tps'):
     theta_list_0 = theta_json[tag]
     theta_tensor = torch.FloatTensor(theta_list_0)
@@ -288,6 +261,7 @@ def get_theta_grid_from_json(theta_json, affTnf, tpsInf, tag='aff_tps'):
 
     b, c, h, w = grid.shape
     theta_len = b * c * h * w
+
     theta_tmp = grid.view(theta_len).numpy().tolist()
     theta_list = [0] * 2 * (256 * 256)
     theta_list[:theta_len] = theta_tmp
@@ -298,10 +272,10 @@ def get_theta_grid_from_json(theta_json, affTnf, tpsInf, tag='aff_tps'):
 
 def get_theta_grid_from_tensor(theta_tensor, affTnf, tpsTnf, tag):
     if tag == 'aff':
-        grid = affTnf.get_grid(Variable(theta_tensor.view(-1, 2, 3)))  # (1, 240, 240, 2)
+        grid = affTnf.get_grid(theta_tensor.view(-1, 2, 3))  # (1, 240, 240, 2)
     else:
         # theta_tensor = theta_tensor.unsqueeze(0)
-        grid = tpsTnf.get_grid(Variable(theta_tensor))  # (1, 240, 240, 2)
+        grid = tpsTnf.get_grid(theta_tensor)  # (1, 240, 240, 2)
 
     b, c, h, w = grid.shape
     theta_len = b * c * h * w
@@ -314,6 +288,7 @@ def get_theta_grid_from_tensor(theta_tensor, affTnf, tpsTnf, tag):
     return theta_tensor
 
 def get_theta_affgrid_by_tensor(affTnf, tpsTnf, theta_aff_tensor, theta_tps_tensor, theta_aff_tps_tensor):
+    # pdb.set_trace()
     theta_aff_tensor = get_theta_grid_from_tensor(theta_aff_tensor, affTnf, tpsTnf, tag='aff')
     theta_tps_tensor = get_theta_grid_from_tensor(theta_tps_tensor, affTnf, tpsTnf, tag='tps')
     theta_aff_tps_tensor = get_theta_grid_from_tensor(theta_aff_tps_tensor, affTnf, tpsTnf, tag='aff_tps')

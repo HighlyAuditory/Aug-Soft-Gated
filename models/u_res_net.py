@@ -275,7 +275,7 @@ class ResidualBlock(nn.Module):
         self.main = nn.Sequential(
             nn.Conv2d(dim_in, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
             nn.InstanceNorm2d(dim_out, affine=True),
-            nn.ReLU(inplace=True),
+            nn.ReLU( ),
 
             nn.Conv2d(dim_out, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
             nn.InstanceNorm2d(dim_out, affine=True))

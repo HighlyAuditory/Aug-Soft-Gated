@@ -141,7 +141,7 @@ class GeoAPI(nn.Module):
 
         source_image = io.imread(source_image_path)
         target_image = io.imread(target_image_path)
-        pdb.set_trace()
+        
         resizeTgt = GeometricTnf(out_h=target_image.shape[0], out_w=target_image.shape[1], use_cuda=self.use_cuda)
 
         ### 如果传入的本来就是正则化、var处理过的，则跳过
@@ -173,9 +173,7 @@ class GeoAPI(nn.Module):
         target_image_var = self.resizeCNN(target_image)
         
         source_image = source_image_var.cuda()
-        target_image = source_image_var.cuda()
-
-        resizeTgt = GeometricTnf(out_h=target_image.shape[0], out_w=target_image.shape[1], use_cuda=self.use_cuda)        
+        target_image = source_image_var.cuda()  
 
         batch = {'source_image': source_image, 'target_image': target_image}
 

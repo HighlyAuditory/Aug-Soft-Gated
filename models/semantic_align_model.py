@@ -31,11 +31,11 @@ class SemanticAlignModel(BaseModel):
             self.netD = networks.define_D(netG_input_nc + 3, not opt.no_ganFeat_loss, num_D=self.opt.num_D)
 
         print('---------- Networks initialized -------------')
-        networks.print_network(self.netG)
+        # networks.print_network(self.netG)
 
-        if self.isTrain:
-            networks.print_network(self.netD)
-            print('----------------------------------------------')
+        # if self.isTrain:
+        #     networks.print_network(self.netD)
+            # print('----------------------------------------------')
 
         # load networks
         if not self.isTrain or opt.continue_train or opt.load_pretrain:
@@ -145,14 +145,13 @@ class SemanticAlignModel(BaseModel):
         if not self.opt.no_Parsing_loss:
             loss_G_parsing = self.criterionParsingLoss(fake_image, real_image) * self.opt.lambda_Parsing
 
-        return [[ loss_D_real, loss_D_fake, loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_G_L1, loss_G_TV, loss_G_parsing], \
-                None if not infer else fake_image ]
+        return [loss_D_real, loss_D_fake, loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_G_L1, loss_G_TV, loss_G_parsing], fake_image 
 
 
     def inference(self, inputs):
-        with torch.no_grad():
-            input_var, _, theta_aff_var, theta_tps_var, theta_aff_tps_var = self.encode_input(inputs, infer=True)
-            fake_image = self.netG.forward(input_var, theta_aff_var, theta_tps_var, theta_aff_tps_var)
+        # with torch.no_grad():
+        input_var, _, theta_aff_var, theta_tps_var, theta_aff_tps_var = self.encode_input(inputs, infer=True)
+        fake_image = self.netG.forward(input_var, theta_aff_var, theta_tps_var, theta_aff_tps_var)
 
         return fake_image
 

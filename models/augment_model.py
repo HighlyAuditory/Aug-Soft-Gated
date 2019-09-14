@@ -42,9 +42,13 @@ class AugmentModel(BaseModel):
         # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.parse_model = Stage_I_Model()
+        
         self.parse_model.initialize(opt, "resNet")
+        self.parse_model.eval()
+
 
         self.main_model = SemanticAlignModel()
+        
         self.main_model.initialize(opt, "wapResNet_v3_afftps")
 
         self.net_SK = Skeleton_Model(opt).cuda()
@@ -88,7 +92,7 @@ class AugmentModel(BaseModel):
             # optimizer G
             self.optimizer_G = self.main_model.optimizer_G
             # optimizer SK
-            self.optimizer_SK = torch.optim.Adam([self.net_SK.alpha], lr=opt.lr2 , betas=(opt.beta2, 0.999))
+            self.optimizer_SK = torch.optim.Adam([self.net_SK.alpha], lr=1 , betas=(opt.beta2, 0.999))
 
     def encode_input(self, inputs, infer=False):
         a_label_tensor = inputs['a_label_tensor']  # 18
@@ -113,13 +117,13 @@ class AugmentModel(BaseModel):
 
         a_image_tensor = a_image_tensor.type(torch.cuda.FloatTensor)
         b_label_tensor = b_label_tensor.type(torch.cuda.FloatTensor)
-        input_tensor_parse = torch.cat([a_parsing_label, b_label_tensor], dim=1)
+        self.input_tensor_parse = torch.cat([a_parsing_label, b_label_tensor], dim=1)
         # input_var_parse = Variable(input_tensor_parse.cuda(), volatile=infer)
 
-        input_tensor_main = torch.cat([a_image_tensor, a_parsing_label, b_parsing_label, b_label_tensor], dim=1)
+        self.input_tensor_main = torch.cat([a_image_tensor, a_parsing_label, b_parsing_label, b_label_tensor], dim=1)
         # input_var_main = Variable(input_tensor_main.cuda(), volatile=infer)
 
-        return input_tensor_parse, input_tensor_main
+        return self.input_tensor_parse, self.input_tensor_main
 
     def get_geo(self, a_parsing, fake_b_parsing):
         theta_aff, theta_tps, theta_aff_tps = self.geo.get_thetas_from_image(a_parsing, fake_b_parsing)
@@ -133,7 +137,7 @@ class AugmentModel(BaseModel):
 
         theta_tensors = torch.cat([theta_aff_tensor, theta_tps_tensor, theta_aff_tps_tensor], dim=1)
 
-        return theta_tensors
+        return theta_tensors, theta_tps_tensor
 
     def forward_aug(self, inputs, infer):
         a1, a2 = inputs['K1'].cuda().float(), inputs['K2'].cuda().float()
@@ -141,7 +145,9 @@ class AugmentModel(BaseModel):
         limbs = inputs['L1'].cuda().float() # (b, 7) will be enough
 
         self.main_model.train()
-        parse_input, main_input = self.encode_input(inputs) 
+        self.net_SK.eval()
+        self.parse_model.eval()
+        self.encode_input(inputs) 
 
         aug_angles = self.net_SK(a1, a2)
         aug_pose = anglelimbtoxyz2(offset, aug_angles, limbs)
@@ -158,49 +164,45 @@ class AugmentModel(BaseModel):
             self.input_BP_aug[:, j+14] = BP2[:, j+14]
         self.input_BP_aug[:, 0] = BP2[:, 0]
 
-        parse_input[:,20:38] = self.input_BP_aug
-        fake_b_parse = self.parse_model.inference(parse_input)
+        parse_input_aug = self.input_tensor_parse
+        parse_input_aug[:,20:38] = self.input_BP_aug
+        fake_b_parse = self.parse_model.inference(parse_input_aug)
+        # fake_b_parse = self.input_tensor_parse
 
-        a_parse = parse_input[:,:20]        
-        a_parsing_rgb_tensor = parsingim_2_tensor(a_parse[0], opt=self.opt, parsing_label_nc=self.parsing_label_nc)
+        a_parsing_rgb_tensor = parsingim_2_tensor(parse_input_aug[0,:20], opt=self.opt, parsing_label_nc=self.parsing_label_nc)
         fake_b_parsing_rgb_tensor = parsingim_2_tensor(fake_b_parse[0], opt=self.opt, parsing_label_nc=self.parsing_label_nc)
 
-        theta_tensors = self.get_geo(a_parsing_rgb_tensor, fake_b_parsing_rgb_tensor)
-        main_input_final = torch.cat([main_input, fake_b_parse, theta_tensors], dim=1   )
-        # self.main_model.netG.zero_grad()
+        theta_tensors,_ = self.get_geo(a_parsing_rgb_tensor, fake_b_parsing_rgb_tensor)
+
+        main_input_aug = self.input_tensor_main
+        # main_input_aug[] still need to change
+        main_input_final = torch.cat([main_input_aug, fake_b_parse, theta_tensors], dim=1   )
+        
         b_prediction = self.main_model.inference(main_input_final)
 
-        reparsing_loss=self.criterionParsingLoss.getSemiParsingLoss(b_prediction, fake_b_parse) * self.opt.lambda_Parsing
-        # this is for skeleton supervision
-        # fake_p2_padded = heatmap_pose.preprocess(b_prediction, [256, 256])
-        # heatmap = heatmap_pose.process(self.cpm_model, fake_p2_padded, self.mask)
-
-
-        # parse_b = aug_input[:,:20]
-        # parse_a_input = torch.cat((parse_b, aug_input[:,:18]), dim=1)
-        # t = Variable(self.input_BP_res, requires_grad=False)
-        # pl = self.pose_loss(torch.clamp(self.heat6, min=0, max=1), t)*self.opt.lambda_pose
-        # reparsing_loss = self.criterionL1(fake_a_parse, parse_input[:,:20])
+        reparsing_loss=self.criterionParsingLoss.getSemiParsingLoss(b_prediction, fake_b_parsing_rgb_tensor) * self.opt.lambda_Parsing
 
         return b_prediction, reparsing_loss    
 
     def forward_target(self, inputs, infer):
         self.net_SK.train()
-        parse_input, main_input = self.encode_input(inputs) 
-        fake_b_parse = self.parse_model.inference(parse_input)
+        self.main_model.eval()
+        self.parse_model.eval()
+        fake_b_parse = self.input_tensor_parse
+        # fake_b_parse = self.parse_model.inference(self.input_tensor_parse)
 
-        a_parse = parse_input[:,:20]        
-        a_parsing_rgb_tensor = parsingim_2_tensor(a_parse[0], opt=self.opt, parsing_label_nc=self.parsing_label_nc)
+        a_parsing_rgb_tensor = parsingim_2_tensor(self.input_tensor_parse[0,:20]  , opt=self.opt, parsing_label_nc=self.parsing_label_nc)
         b_parsing_rgb_tensor = parsingim_2_tensor(fake_b_parse[0], opt=self.opt, parsing_label_nc=self.parsing_label_nc)
 
-        theta_tensors = self.get_geo(a_parsing_rgb_tensor, b_parsing_rgb_tensor)
-        main_input_final = torch.cat([main_input, fake_b_parse, theta_tensors], dim=1)
+        theta_tensors, theta_tps = self.get_geo(a_parsing_rgb_tensor, b_parsing_rgb_tensor)
+        main_input_final = torch.cat([self.input_tensor_main, fake_b_parse, theta_tensors], dim=1)
         target_loss, b_prediction = self.main_model.forward(main_input_final, False)
 
-        losses = [ torch.mean(x) if not isinstance(x, int) else x for x in target_loss ]
+        losses = [ torch.mean(x) for x in target_loss ]
         loss_dict = dict(zip(self.loss_names, losses))
 
         # loss_D = (loss_dict['D_real'] + loss_dict['D_fake']) * 0.5
         loss_G = loss_dict['G_GAN']  + loss_dict['G_L1'] + loss_dict['G_VGG'] + loss_dict['G_TV'] + loss_dict['G_GAN_Feat'] + loss_dict['G_Parsing']
-
-        return b_prediction, loss_G
+        
+        print(loss_G)
+        return b_prediction, b_parsing_rgb_tensor.mean()

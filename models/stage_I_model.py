@@ -27,10 +27,10 @@ class Stage_I_Model(BaseModel):
             self.netD = networks.define_D(netG_input_nc + output_nc, not opt.no_ganFeat_loss)
 
         print('---------- Networks initialized -------------')
-        networks.print_network(self.netG)
-        if self.isTrain:
-            networks.print_network(self.netD)
-            print('----------------------------------------------')
+        # networks.print_network(self.netG)
+        # if self.isTrain:
+        #     networks.print_network(self.netD)
+            # print('----------------------------------------------')
 
         # load networks
         if not self.isTrain or opt.continue_train or opt.load_pretrain:
@@ -113,6 +113,14 @@ class Stage_I_Model(BaseModel):
         # print ("encode_input b_label_tensor.shape", b_label_tensor.shape)
         return a_parsing_var, b_parsing_var, b_label_var
 
+    def inference(self, inputs):
+        # with torch.no_grad():
+        # self.input_tensor_parse = torch.cat([a_parsing_label, b_label_tensor], dim=1)
+        # a_parsing_var, b_parsing_var, b_label_var = self.encode_input(inputs, infer=True)
+        # input_all = torch.cat((a_parsing_var, b_label_var), dim=1)
+        fake_b_parsing_var = self.netG.forward(inputs)
+
+        return fake_b_parsing_var
 
     def forward(self, inputs, infer):
         a_parsing_var, b_parsing_var, b_label_var = self.encode_input(inputs)
@@ -138,13 +146,7 @@ class Stage_I_Model(BaseModel):
         return [[ loss_G_GAN, loss_G_GAN_Feat, loss_G_L1, loss_G_parsing, loss_D_real, loss_D_fake], \
                 None if not infer else fake_b_parsing_var ]
 
-    def inference(self, inputs):
-        with torch.no_grad():
-            a_parsing_var, b_parsing_var, b_label_var = self.encode_input(inputs, infer=True)
-            input_all = torch.cat((a_parsing_var, b_label_var), dim=1)
-            fake_b_parsing_var = self.netG.forward(input_all)
 
-        return fake_b_parsing_var
 
     def inference_2(self, inputs):
         with torch.no_grad():

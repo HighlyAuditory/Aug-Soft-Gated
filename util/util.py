@@ -55,21 +55,22 @@ def parsing2im(parsing, imtype=np.uint8):
     return parsing_numpy
 
 def parsingim_2_tensor(parsing_label, opt, parsing_label_nc=20):
-    # one_hot = label_2_onhot(parsing_label, parsing_label_nc=parsing_label_nc)
-    # label_rgb = parsing2im(one_hot)
-    label_rgb = parsing_label[:3]
+    one_hot = label_2_onhot(parsing_label, parsing_label_nc=parsing_label_nc)
+    label_rgb = parsing2im(one_hot)
+    # label_rgb = parsing_label[:3]
     # pdb.set_trace()
     # label_rgb_tensor = get_image_tensor_by_im(label_rgb, opt=opt)
     # \wenwens{still need to normalize etc}
-    # label_rgb_tensor = label_rgb.transpose(1,2).transpose(0,1)
-    label_rgb_tensor = label_rgb.unsqueeze_(0).cuda()
+    # pdb.set_trace()
+    label_rgb_tensor = label_rgb.transpose(1,2).transpose(0,1)
+    label_rgb_tensor = label_rgb_tensor.unsqueeze_(0).cuda()
 
     return label_rgb_tensor
 
 
 def get_image_tensor_by_im(image, opt):
     #image = Image.open(jpg_path).convert('RGB')
-    image = Image.fromarray(image)
+    # image = Image.fromarray(image)
     # pdb.set_trace()
     params = get_params(opt, image.size()[:2])
     transform = get_transform(opt, params)

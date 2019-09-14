@@ -68,7 +68,7 @@ class ResidualBlock(nn.Module):
         self.main = nn.Sequential(
             nn.Conv2d(dim_in, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
             nn.InstanceNorm2d(dim_out, affine=True),
-            nn.ReLU(inplace=True),
+            nn.ReLU( ),
 
             nn.Conv2d(dim_out, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
             nn.InstanceNorm2d(dim_out, affine=True))
@@ -107,28 +107,28 @@ class Generator_warpResNet(nn.Module):
         layers_d.append(nn.ReflectionPad2d(3))
         layers_d.append(nn.Conv2d(input_nc_1, conv_dim, kernel_size=7, padding=0))
         layers_d.append(nn.InstanceNorm2d(conv_dim, affine=True))
-        layers_d.append(nn.ReLU(inplace=True))
+        layers_d.append(nn.ReLU( ))
 
         # Down-Sampling
         curr_dim = conv_dim
         for i in range(3):
             layers_d.append(nn.Conv2d(curr_dim, curr_dim * 2, kernel_size=3, stride=2, padding=1))
             layers_d.append(nn.InstanceNorm2d(curr_dim * 2, affine=True))
-            layers_d.append(nn.ReLU(inplace=True))
+            layers_d.append(nn.ReLU( ))
             curr_dim = curr_dim * 2
 
         layers_d_2 = []
         layers_d_2.append(nn.ReflectionPad2d(3))
         layers_d_2.append(nn.Conv2d(input_nc_2, conv_dim, kernel_size=7, padding=0))
         layers_d_2.append(nn.InstanceNorm2d(conv_dim, affine=True))
-        layers_d_2.append(nn.ReLU(inplace=True))
+        layers_d_2.append(nn.ReLU( ))
 
         # Down-Sampling
         curr_dim = conv_dim
         for i in range(3):
             layers_d_2.append(nn.Conv2d(curr_dim, curr_dim * 2, kernel_size=3, stride=2, padding=1))
             layers_d_2.append(nn.InstanceNorm2d(curr_dim * 2, affine=True))
-            layers_d_2.append(nn.ReLU(inplace=True))
+            layers_d_2.append(nn.ReLU( ))
             curr_dim = curr_dim * 2
 
         layers_b = []
@@ -144,12 +144,12 @@ class Generator_warpResNet(nn.Module):
             layers_u.append(
                 nn.ConvTranspose2d(curr_dim, curr_dim // 2, kernel_size=3, stride=2, padding=1, output_padding=1))
             layers_u.append(nn.InstanceNorm2d(curr_dim // 2, affine=True))
-            layers_u.append(nn.ReLU(inplace=True))
+            layers_u.append(nn.ReLU( ))
             curr_dim = curr_dim // 2
 
         layers_u.append(nn.ReflectionPad2d(3))
         layers_u.append(nn.Conv2d(curr_dim, output_nc, kernel_size=7, padding=0))
-        #layers_u.append(nn.ReLU(inplace=True))  # replace layers.append(nn.Tanh())
+        #layers_u.append(nn.ReLU( ))  # replace layers.append(nn.Tanh())
         layers_u.append(nn.Tanh())
 
         self.down_1 = nn.Sequential(*layers_d)
@@ -282,7 +282,7 @@ class ResidualBlock_resNet(nn.Module):
         self.main = nn.Sequential(
             nn.Conv2d(dim_in, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
             nn.InstanceNorm2d(dim_out, affine=True),
-            nn.ReLU(inplace=True),
+            nn.ReLU( ),
             nn.Conv2d(dim_out, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
             nn.InstanceNorm2d(dim_out, affine=True))
 
@@ -298,14 +298,14 @@ class Generator_resNet(nn.Module):
         layers = []
         layers.append(nn.Conv2d(input_nc, conv_dim, kernel_size=7, stride=1, padding=3, bias=False))
         layers.append(nn.InstanceNorm2d(conv_dim, affine=True))
-        layers.append(nn.ReLU(inplace=True))
+        layers.append(nn.ReLU( ))
 
         # Down-Sampling
         curr_dim = conv_dim
         for i in range(2):
             layers.append(nn.Conv2d(curr_dim, curr_dim*2, kernel_size=4, stride=2, padding=1, bias=False))
             layers.append(nn.InstanceNorm2d(curr_dim*2, affine=True))
-            layers.append(nn.ReLU(inplace=True))
+            layers.append(nn.ReLU( ))
             curr_dim = curr_dim * 2
 
         # Bottleneck
@@ -316,7 +316,7 @@ class Generator_resNet(nn.Module):
         for i in range(2):
             layers.append(nn.ConvTranspose2d(curr_dim, curr_dim//2, kernel_size=4, stride=2, padding=1, bias=False))
             layers.append(nn.InstanceNorm2d(curr_dim//2, affine=True))
-            layers.append(nn.ReLU(inplace=True))
+            layers.append(nn.ReLU( ))
             curr_dim = curr_dim // 2
 
         layers.append(nn.Conv2d(curr_dim, output_nc, kernel_size=7, stride=1, padding=3, bias=False))
@@ -354,7 +354,7 @@ class GlobalGenerator(nn.Module):
             model += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2), kernel_size=3, stride=2, padding=1,
                                          output_padding=1),
                       norm_layer(int(ngf * mult / 2)), activation]
-        model += [nn.ReflectionPad2d(3), nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0), nn.Tanh()]
+        model = model+[nn.ReflectionPad2d(3), nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0), nn.Tanh()]
         self.model = nn.Sequential(*model)
 
     def forward(self, input):
