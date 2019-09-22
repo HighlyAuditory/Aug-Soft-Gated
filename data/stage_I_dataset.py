@@ -11,7 +11,6 @@ class Stage_I_Dataset(BaseDataset):
         self.opt = opt
         self.root = opt.dataroot
         print("opt.pairs_path={}".format(opt.pairs_path))
-        pdb.set_trace()
         self.path_pairs = sorted(self.get_path_pairs(opt.pairs_path, opt.phase))
         if not opt.serial_batches:
             random.shuffle(self.path_pairs)
