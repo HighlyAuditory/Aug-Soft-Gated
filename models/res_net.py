@@ -36,6 +36,9 @@ class ResGenerator(nn.Module):
     # def forward(self, input,  theta_aff, theta_tps, theta_aff_tps):
     def forward(self, input):
         return self.model(input)
+        # for i, layer in enumerate(self.model):
+        #     print(layer)
+        #     input = layer(input)
 
 
 # Define a resnet block

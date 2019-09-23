@@ -7,6 +7,7 @@ import cv2 as cv
 from . import util
 from . import html
 import scipy.misc 
+import pdb
 try:
     from StringIO import StringIO  # Python 2.7
 except ImportError:
@@ -63,6 +64,7 @@ class Visualizer():
                         util.save_image(image_numpy[i], img_path)
                 else:
                     img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.png' % (epoch, label))
+                    print(label)
                     util.save_image(image_numpy, img_path)
 
             # update website

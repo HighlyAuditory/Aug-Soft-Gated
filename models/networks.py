@@ -9,12 +9,15 @@ from .geo.geotnf.transformation import GeometricTnf
 from .u_res_net import UResNet, UResNetLast
 from .warp_res_net_aff_tps import WarpResGenerator as WarpResGenerator_AFFTPS
 from .res_net import ResGenerator
+# need to change input shape for train_skeleton
+# from .res_sk_net import ResGenerator
 from .u_net import UnetGenerator
 
 def define_G(input_nc, output_nc, which_G='wapResNet_v3_afftps'):
     if which_G == 'wapResNet_v3_afftps':
         netG = WarpResGenerator_AFFTPS(23, input_nc - 23, output_nc)
     elif which_G == 'resNet':
+        # for stage I 
         netG = ResGenerator(input_nc, output_nc)
     elif which_G == 'UNet':
         netG = UnetGenerator(input_nc, output_nc)

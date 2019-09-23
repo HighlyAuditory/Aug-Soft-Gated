@@ -5,7 +5,6 @@ import time
 import numpy as np
 import torch
 import sys
-import pdb
 sys.path.append("/home/wenwens/Downloads/semantic_align_gan_v9")
 
 from collections import OrderedDict
@@ -16,6 +15,14 @@ from util.visualizer import Visualizer
 from util.util import tensor2im, parsing2im, label_2_onhot
 from torch.autograd import Variable
 from val import get_valList
+
+def label2onhot(b_parsing_tensor, parsing_label_nc):
+    size = b_parsing_tensor.size()
+    oneHot_size = (size[0], parsing_label_nc, size[2], size[3])
+    b_parsing_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
+    b_parsing_label = b_parsing_label.scatter_(1, b_parsing_tensor.data.long().cuda(), 1.0)
+
+    return b_parsing_label
 
 opt = TrainOptions().parse()
 iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
@@ -35,6 +42,7 @@ if opt.debug:
     opt.niter_decay = 0
     opt.max_dataset_size = 100
 
+opt.stage = 11
 data_loader = CreateDataLoader(opt)
 dataset = data_loader.load_data()
 dataset_size = len(data_loader)
@@ -49,7 +57,6 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     if epoch != start_epoch:
         epoch_iter = epoch_iter % dataset_size
 
-    # count = 0
     for i, data in enumerate(dataset, start=epoch_iter):
         iter_start_time = time.time()
         total_steps += opt.batchSize
@@ -57,13 +64,21 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
 
         # whether to collect output images
         save_fake = total_steps % opt.display_freq == 0
-        b_label_show_tensor = data['b_label_show_tensor']
-        
-        infer = save_fake
-        model.train()
-        losses, fake_b_parsing = model.forward(data, infer)
 
-        ### ['G_GAN', 'G_GAN_Feat', 'G_L1', 'D_real', 'D_fake']
+        a_parsing_tensor = data['a_parsing_tensor']
+        b_parsing_tensor = data['b_parsing_tensor']
+        a_label_tensor = data['a_label_tensor'].cuda()
+        b_label_tensor = data['b_label_tensor'].cuda()
+        b_label_show_tensor = data['b_label_show_tensor'].cuda()
+
+        a_parsing_tensor = label2onhot(a_parsing_tensor, 20).cuda()
+        b_parsing_tensor = label2onhot(b_parsing_tensor, 20).cuda()
+
+        input_all = torch.cat((a_parsing_tensor, a_label_tensor, b_label_tensor), dim=1)
+
+        model.train()
+        losses, fake_b_parsing = model.forward(input_all, b_parsing_tensor, infer=save_fake)
+
         # sum per device losses
         losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
         loss_dict = dict(zip(model.module.loss_names, losses))
@@ -93,14 +108,14 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             visualizer.plot_current_errors(errors, total_steps)
 
         ############## Display output images and Val images ######################
-        if save_fake:
+        if 0:
+            # valifation for adding skeleton not implemented
             val_list = get_valList(model, opt)
             train_list = [('b_label', tensor2im(b_label_show_tensor[0])),
                            ('a_parsing', parsing2im(label_2_onhot(a_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
                            ('b_parsing', parsing2im(label_2_onhot(b_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
                            ('fake_b_parsing', parsing2im(fake_b_parsing.data[0]))]
             val_list[0:0] = train_list
-            # val_list = train_list
             visuals = OrderedDict(val_list)
 
             visualizer.display_current_results(visuals, epoch, total_steps)

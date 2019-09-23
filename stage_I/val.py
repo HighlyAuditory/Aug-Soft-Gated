@@ -4,6 +4,7 @@ import torch
 from data.utils import get_parsing_label_tensor, get_label_tensor
 from util.util import tensor2im, parsing2im, label_2_onhot
 from torch.autograd import Variable
+import pdb
 
 def get_test_result(a_jpg_path, b_jpg_path, model, opt):
     if 20 == opt.parsing_label_nc:
@@ -20,7 +21,7 @@ def get_test_result(a_jpg_path, b_jpg_path, model, opt):
     a_parsing_tensor = get_parsing_label_tensor(a_parsing_path, opt)
     b_parsing_tensor = get_parsing_label_tensor(b_parsing_path, opt)
     b_label_tensor, b_label_show_tensor = get_label_tensor(b_json_path, b_jpg_path, opt)
-
+    
     input_tensors = torch.cat((a_parsing_tensor, b_parsing_tensor, b_label_tensor), dim=0)
     input_var = Variable(input_tensors[None, :, :, :].type(torch.cuda.FloatTensor))  ##torch.FloatTensor of size (1,34,256,256)
 

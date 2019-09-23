@@ -5,7 +5,8 @@ import time
 import numpy as np
 import torch
 import sys
-# sys.path.append("/home/disk2/donghaoye/ACMMM/semantic_align_gan_v4")
+import pdb
+sys.path.append("/home/wenwens/Downloads/semantic_align_gan_v9")
 
 from collections import OrderedDict
 from options.train_options import TrainOptions
@@ -39,8 +40,7 @@ dataset = data_loader.load_data()
 dataset_size = len(data_loader)
 print('#training images = %d' % dataset_size)
 
-
-model = create_model(opt)
+model = create_model(opt, opt.which_G)
 visualizer = Visualizer(opt)
 
 total_steps = (start_epoch-1) * dataset_size + epoch_iter    
@@ -94,7 +94,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         ############## Display results and errors ##########
         ### print out errors
         if total_steps % opt.print_freq == 0:
-            errors = {k: v.data[0] if not isinstance(v, int) else v for k, v in loss_dict.items()}
+            errors = {k: v.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
             t = (time.time() - iter_start_time) / opt.batchSize
             visualizer.print_current_errors(epoch, epoch_iter, errors, t)
             visualizer.plot_current_errors(errors, total_steps)

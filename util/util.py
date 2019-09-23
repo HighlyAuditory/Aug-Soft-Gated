@@ -44,15 +44,15 @@ def label_2_onhot(b_parsing_tensor, parsing_label_nc=20):
     return b_parsing_label
 
 def parsing2im(parsing, imtype=np.uint8):
-    # parsing_numpy = parsing.cpu().float().numpy()
-    CMAP_tensor = torch.Tensor(CMAP)
-    image_index = torch.argmax(parsing, dim=0)
-    parsing_numpy = torch.zeros((image_index.shape[0], image_index.shape[1], 3))
+    parsing_numpy = parsing.cpu().float().numpy()
+    image_index = np.argmax(parsing_numpy, axis=0)
+    parsing_numpy = np.zeros((image_index.shape[0], image_index.shape[1], 3))
     for h in range(image_index.shape[0]):
         for w in range(image_index.shape[1]):
-            parsing_numpy[h, w, :] = CMAP_tensor[image_index[h, w]]
+            parsing_numpy[h, w, :] = CMAP[image_index[h, w]]
 
-    return parsing_numpy
+
+    return parsing_numpy.astype(imtype)
 
 def parsingim_2_tensor(parsing_label, opt, parsing_label_nc=20):
     one_hot = label_2_onhot(parsing_label, parsing_label_nc=parsing_label_nc)
@@ -111,7 +111,9 @@ def tensor2label(output, n_label, imtype=np.uint8):
     return output.astype(imtype)
 
 def save_image(image_numpy, image_path):
+    
     image_pil = Image.fromarray(image_numpy)
+
     image_pil.save(image_path)
 
 def mkdirs(paths):

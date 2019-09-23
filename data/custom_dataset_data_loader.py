@@ -1,6 +1,6 @@
 import torch.utils.data
 from data.base_data_loader import BaseDataLoader
-
+import pdb
 
 def CreateDataset(opt):
     dataset = None
@@ -14,6 +14,9 @@ def CreateDataset(opt):
     elif opt.stage == 3:
         from data.w_o_stage_I_dataset import W_O_Stage_I_Dataset
         dataset = W_O_Stage_I_Dataset()
+    elif opt.stage == 11:
+        from data.stage_I_skeleton_dataset import Stage_I_Skeleton_Dataset
+        dataset = Stage_I_Skeleton_Dataset()
     elif opt.stage == 12:
         from data.stage_I_II_dataset import Stage_I_II_Dataset
         dataset = Stage_I_II_Dataset()

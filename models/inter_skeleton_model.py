@@ -7,14 +7,14 @@ import pdb
 
 import torch.nn as nn
 
-class Skeleton_Model(BaseModel):
+class InterSkeleton_Model(BaseModel):
     def name(self):
-        return 'Skeleton_Model'
+        return 'InterSkeleton_Model'
 
         # input shape (b, 7, 3)
 
     def __init__(self, opt):
-        super(Skeleton_Model, self).__init__()
+        super(InterSkeleton_Model, self).__init__()
         BaseModel.initialize(self, opt)
         self.alpha = Variable(torch.randn((1,7,1), device="cuda"), requires_grad=True)
 

@@ -3,7 +3,7 @@ import os
 import random
 from PIL import Image
 from data.base_dataset import BaseDataset, get_params, get_transform
-from utils import get_parsing_label_tensor, get_label_tensor
+from .utils import get_parsing_label_tensor, get_label_tensor
 import pdb
 
 class Stage_I_Dataset(BaseDataset):
@@ -36,7 +36,6 @@ class Stage_I_Dataset(BaseDataset):
                       'a_img_path': a_jpg_path, 'b_img_path': b_jpg_path}
 
         return input_dict
-
 
     def get_path_pairs(self, pairs_path, phase):
         p = []

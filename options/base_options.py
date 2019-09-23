@@ -35,7 +35,7 @@ class BaseOptions():
         # self.parser.add_argument('--pairs_path', type=str, default='./datasets/deepfashion/In-shop_AB_HD_p1024/Anno/list_landmarks_inshop_filterAll_by_jsonpoint_pairs_mvoneId_0118.txt')
         # self.parser.add_argument('--pairs_path', type=str, default='./datasets/deepfashion/In-shop_AB_HD_p1024/Anno/list_landmarks_inshop_filterAll_by_jsonpoint_pairs_0402.txt')
         # self.parser.add_argument('--pairs_path', type=str, default='./datasets/deepfashion/In-shop_AB_HD_p1024/Anno/my_train_pairs_deepfashion.txt')
-        self.parser.add_argument('--pairs_path', type=str, default='/home/wenwens/Downloads/semantic_align_gan_v9/datasets/deepfashion/paper_images/256/val_img_path.txt')
+        self.parser.add_argument('--pairs_path', type=str, default='/home/wenwens/Downloads/semantic_align_gan_v9/datasets/deepfashion/paper_images/256/train_img_path.txt')
         # self.parser.add_argument('--pairs_path', type=str, default='./datasets/deepfashion/In-shop_AB_HD_p1024/Anno/list_landmarks_inshop_filterAll_by_jsonpoint_pairs_0402_shuffle.txt')
         self.parser.add_argument('--resize_or_crop', type=str, default='scale_width', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
         self.parser.add_argument('--serial_batches', action='store_true', help='if true, takes images in order to make batches, otherwise takes them randomly')        
