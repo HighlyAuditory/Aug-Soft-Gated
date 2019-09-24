@@ -3,14 +3,15 @@ import os
 import random
 from PIL import Image
 from data.base_dataset import BaseDataset, get_params, get_transform
-from utils import get_parsing_label_tensor, get_label_tensor
+from .utils import get_parsing_label_tensor, get_label_tensor
+import numpy as np
 import pdb
 
-class Stage_I_Dataset(BaseDataset):
+class Stage_I_Augment_Dataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
-        print("opt.pairs_path={}".format(opt.pairs_path))
+        
         self.path_pairs = sorted(self.get_path_pairs(opt.pairs_path, opt.phase))
         if not opt.serial_batches:
             random.shuffle(self.path_pairs)
@@ -66,8 +67,8 @@ class Stage_I_Dataset(BaseDataset):
         a_json_path = a_jpg_path.replace('.jpg', '_keypoints.json').replace('img/', 'img_keypoint_json/')
         b_json_path = b_jpg_path.replace('.jpg', '_keypoints.json').replace('img/', 'img_keypoint_json/')
 
-        a_3d_path = None
-        b_3d_path = None
+        a_3d_path = a_jpg_path.replace('.jpg', '.npy').replace('img/', 'img_3d_ordered/')
+        b_3d_path = b_jpg_path.replace('.jpg', '.npy').replace('img/', 'img_3d_ordered/')
 
         return a_jpg_path, b_jpg_path, \
                a_parsing_path, b_parsing_path, \
@@ -78,4 +79,4 @@ class Stage_I_Dataset(BaseDataset):
         return len(self.path_pairs)
 
     def name(self):
-        return 'Stage_I_Dataset'
+        return 'Stage_I_Augment_Dataset'

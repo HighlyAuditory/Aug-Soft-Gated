@@ -26,6 +26,9 @@ def CreateDataset(opt):
     elif opt.stage == 4:
         from data.augment_dataset import Augment_Dataset
         dataset = Augment_Dataset()
+    elif opt.stage == 5:
+        from data.stage_I_augment_dataset import Stage_I_Augment_Dataset
+        dataset = Stage_I_Augment_Dataset()
 
     print("dataset [%s] was created" % (dataset.name()))
     dataset.initialize(opt)

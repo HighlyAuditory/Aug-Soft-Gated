@@ -9,15 +9,16 @@ import torch
 from . import pose_estimation
 import torch.nn.functional as F
 import cv2
+import pdb
 
 def preprocess(origin_img, image_size):
     normed_img = 0.5 * (origin_img - 0.5)
     height, width = image_size
     scale = 368.0 / height  # boxsize
     imgToTest = F.upsample(normed_img, scale_factor=(scale, scale), mode='bicubic')
-
-    imgToTest_padded = torch.zeros([origin_img.shape[0], 3, 368, 256]).cuda()
-    imgToTest_padded[:,:,:,:253] = imgToTest
+    # pdb.set_trace()
+    # imgToTest_padded = torch.zeros([origin_img.shape[0], 3, 368, 368]).cuda()
+    imgToTest_padded = imgToTest
 
     return imgToTest_padded
 
@@ -26,8 +27,7 @@ def process(model, input_var, mask_var):
     _, _, _, _, _, _, _, _, _, _, _, heatmap = model(input_var, mask_var)
     # (b, 19, 46, 32)
     heatmap = F.upsample(heatmap, scale_factor=(8, 8), mode='bicubic')
-    heatmap = heatmap[..., :253]
-    heatmap = F.upsample(heatmap, size=(256, 176), mode='bicubic')
+    heatmap = F.upsample(heatmap, size=(256, 256), mode='bicubic')
 
     return heatmap[:,:18]
 
@@ -37,8 +37,9 @@ def construct_model(model_path):
     from collections import OrderedDict
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
-        name = k
-        new_state_dict[name] = v
+        if 'fc' not in k:
+            name = k[7:]
+            new_state_dict[name] = v
     state_dict = model.state_dict()
     state_dict.update(new_state_dict)
     model.load_state_dict(state_dict)

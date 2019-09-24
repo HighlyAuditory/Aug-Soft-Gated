@@ -47,7 +47,7 @@ class AugmentOptions(BaseOptions):
         self.parser.add_argument('--lambda_L1', type=float, default=10.0, help='weight for L1 loss')
         self.parser.add_argument('--lambda_TV', type=float, default=10e-6, help='weight for TV loss')
         self.parser.add_argument('--lambda_Parsing', type=float, default=0.0001, help='weight for Perceptual loss')
-
+        self.parser.add_argument('--lambda_pose', type=float, default=0.0001, help='weight for reparse loss')
         # self.parser.add_argument('--no_dynamic_policy', action='store_true', help='no_dynamic_policy')
         # self.parser.add_argument('--which_policy', type=str, default='policy1', help='policy1 | policy2 | policy3 | policy4')
 

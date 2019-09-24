@@ -9,7 +9,7 @@ import pdb
 sys.path.append("/home/wenwens/Downloads/semantic_align_gan_v9")
 
 from collections import OrderedDict
-from options.train_options import TrainOptions
+from options.augment_options import AugmentOptions
 from data.data_loader import CreateDataLoader
 from models.models import create_model
 from util.visualizer import Visualizer
@@ -17,7 +17,7 @@ from util.util import tensor2im, parsing2im, label_2_onhot
 from torch.autograd import Variable
 from val import get_valList
 
-opt = TrainOptions().parse()
+opt = AugmentOptions().parse()
 iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
 if opt.continue_train:
     try:
@@ -35,6 +35,7 @@ if opt.debug:
     opt.niter_decay = 0
     opt.max_dataset_size = 100
 
+opt.stage = 5
 data_loader = CreateDataLoader(opt)
 dataset = data_loader.load_data()
 dataset_size = len(data_loader)
@@ -61,7 +62,12 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         
         infer = save_fake
         model.train()
-        losses, fake_b_parsing = model.forward(data, infer)
+        aug_losses, fake_b_parsing = model.module.forward_augment(data)
+        losses, fake_b_parsing = model.module.forward_target(data)
+        
+        print(model.module.netG.model[-2].bias)
+        print(model.module.skeleton_net.alpha)
+        print(model.module.skeleton_net.alpha.grad)
 
         ### ['G_GAN', 'G_GAN_Feat', 'G_L1', 'D_real', 'D_fake']
         # sum per device losses
@@ -93,17 +99,17 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             visualizer.plot_current_errors(errors, total_steps)
 
         ############## Display output images and Val images ######################
-        if save_fake:
-            val_list = get_valList(model, opt)
-            train_list = [('b_label', tensor2im(b_label_show_tensor[0])),
-                           ('a_parsing', parsing2im(label_2_onhot(a_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
-                           ('b_parsing', parsing2im(label_2_onhot(b_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
-                           ('fake_b_parsing', parsing2im(fake_b_parsing.data[0]))]
-            val_list[0:0] = train_list
+        # if save_fake:
+            # val_list = get_valList(model, opt)
+            # train_list = [('b_label', tensor2im(b_label_show_tensor[0])),
+            #                ('a_parsing', parsing2im(label_2_onhot(a_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
+            #                ('b_parsing', parsing2im(label_2_onhot(b_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
+            #                ('fake_b_parsing', parsing2im(fake_b_parsing.data[0]))]
+            # val_list[0:0] = train_list
             # val_list = train_list
-            visuals = OrderedDict(val_list)
+            # visuals = OrderedDict(val_list)
 
-            visualizer.display_current_results(visuals, epoch, total_steps)
+            # visualizer.display_current_results(visuals, epoch, total_steps)
 
 
         ### save latest model

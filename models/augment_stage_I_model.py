@@ -8,6 +8,14 @@ from . import networks
 from . import losses
 from .inter_skeleton_model import InterSkeleton_Model
 from . import heatmap_pose
+from .good_order_cood_angle_convert import anglelimbtoxyz2, check_visibility
+import numpy as np
+from PIL import Image
+import pdb
+
+label_colours = [(0,0,0)
+                , (128,0,0), (255,0,0), (0,85,0), (170,0,51), (255,85,0), (0,0,85), (0,119,221), (85,85,0), (0,85,85), (85,51,0), (52,86,128), (0,128,0)
+                , (0,0,255), (51,170,221), (0,255,255), (85,255,170), (170,255,85), (255,255,0), (255,170,0)]
 
 # will be add to some util file later
 def cords_to_map_yx(cords, img_size, sigma=6):
@@ -26,9 +34,34 @@ def cords_to_map_yx(cords, img_size, sigma=6):
 
     return result
 
-class Stage_I_Model(BaseModel):
+def decode_labels(mask, num_images=1, num_classes=20):
+    """Decode batch of segmentation masks.
+
+    Args:
+      mask: result of inference after taking argmax.
+      num_images: number of images to decode from the batch.
+      num_classes: number of classes to predict (including background).
+
+    Returns:
+      A batch with num_images RGB images of the same size as the input.
+    """
+    n, h, w = mask.shape
+    assert (n >= num_images), 'Batch size %d should be greater or equal than number of images to save %d.' % (
+    n, num_images)
+    outputs = np.zeros((num_images, h, w, 3), dtype=np.uint8)
+    for i in range(num_images):
+        img = Image.new('RGB', (len(mask[i, 0]), len(mask[i])))
+        pixels = img.load()
+        for j_, j in enumerate(mask[i, :, :]):
+            for k_, k in enumerate(j):
+                if k < num_classes:
+                    pixels[k_, j_] = label_colours[k]
+        outputs[i] = np.array(img)
+    return outputs.transpose(0,3,1,2)
+
+class Augment_Stage_I_Model(BaseModel):
     def name(self):
-        return 'Stage_I_Model'
+        return 'Augment_Stage_I_Model'
 
     def initialize(self, opt, which_G):
         BaseModel.initialize(self, opt)
@@ -43,13 +76,14 @@ class Stage_I_Model(BaseModel):
         self.netG = networks.define_G(netG_input_nc, output_nc, which_G=which_G)
         # Discriminator network
         # will experiment on whether discriminator is needed later
-        # if self.isTrain:
-        #     use_sigmoid = opt.no_lsgan
-        #     self.netD = networks.define_D(netG_input_nc + output_nc, not opt.no_ganFeat_loss)
+        if self.isTrain:
+            use_sigmoid = opt.no_lsgan
+            self.netD = networks.define_D(netG_input_nc + output_nc, not opt.no_ganFeat_loss)
 
         if self.isTrain:
-            cpm_model_path = 'parse_coco_best.pth.tar'
+            cpm_model_path = 'openpose_coco_b16_best.pth.tar'
             self.cpm_model = heatmap_pose.construct_model(cpm_model_path)
+            self.mask = torch.ones([opt.batchSize, 1, 46, 46]).cuda()
 
         print('---------- Networks initialized -------------')
 
@@ -72,6 +106,7 @@ class Stage_I_Model(BaseModel):
             self.criterionFeat = torch.nn.L1Loss()
             self.criterionL1 = torch.nn.L1Loss()
             self.criterionParsingLoss = losses.ParsingCrossEntropyLoss(tensor=self.Tensor)
+            self.pose_loss = torch.nn.MSELoss()
 
             self.loss_names = ['G_GAN', 'G_GAN_Feat', 'G_L1', 'G_parsing', 'D_real', 'D_fake']
 
@@ -90,7 +125,7 @@ class Stage_I_Model(BaseModel):
 
     def label2onhot(self, b_parsing_tensor):
         # print ("label2onehot b_parsing_tensor", b_parsing_tensor.shape)
-        size = b_parsing_var.size()
+        size = b_parsing_tensor.size()
         oneHot_size = (size[0], self.opt.parsing_label_nc, size[2], size[3])
         b_parsing_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
         b_parsing_label = b_parsing_label.scatter_(1, b_parsing_tensor.data.long().cuda(), 1.0)
@@ -112,13 +147,12 @@ class Stage_I_Model(BaseModel):
         offset = data['F1'].cuda().float() # (b, 3) will be enough
         limbs = data['L1'].cuda().float() # (b, 7) will be enough
 
-        return input_tensor, b_parsing_tensor, a_parsing_tensor, b_label_tensor, 
-                                        a1, a2, offset, limbs
+        return input_tensor, b_parsing_tensor, a_parsing_tensor, b_label_tensor, a1, a2, offset, limbs
 
     def inference(self, inputs):
         with torch.no_grad():
             
-            a_parsing_var, b_parsing_var, b_label_var = self.encode_input(inputs, infer=True)
+            _, b_parsing_var, a_parsing_var, b_label_var,_,_,_,_ = self.encode_input(inputs, infer=True)
             # self.input_tensor_parse = torch.cat([a_parsing_var, b_label_var], dim=1)
             input_all = torch.cat((a_parsing_var, b_label_var), dim=1)
             fake_b_parsing_var = self.netG.forward(input_all)
@@ -126,38 +160,48 @@ class Stage_I_Model(BaseModel):
         return fake_b_parsing_var
 
     def forward_augment(self, inputs):
-        _, _, a_parsing_tensor, b_label_var, a1, a2, offset, limbs = self.encode_input(inputs)
+        _, _, a_parsing_tensor, b_label, a1, a2, offset, limbs = self.encode_input(inputs)
         aug_angles = self.skeleton_net(a1, a2)
         # aug_angles = a1
         
         aug_pose = anglelimbtoxyz2(offset, aug_angles, limbs)
         # aug_pose = anglelimbtoxyz2(offset, a1, limbs)
 
-        for i in range(BP2.shape[0]):
+        for i in range(b_label.shape[0]):
             aug_pose[i] = check_visibility(aug_pose[i]) # 2d pose
 
         aug_pose = aug_pose[...,:2]
 
-        self.input_BP_aug = cords_to_map_yx(aug_pose, (256, 176), sigma=0.4).float()
+        self.input_BP_aug = cords_to_map_yx(aug_pose, (256, 256), sigma=0.4).float().cuda()
         # self.input_BP_aug = BP2
-        self.input_BP_res = cords_to_map_yx(aug_pose, (256, 176), sigma=4).cuda().float()
+        self.input_BP_res = cords_to_map_yx(aug_pose, (256, 256), sigma=4).cuda().float()
 
         # paste skeleton2 face
         for j in range(4):
-            self.input_BP_aug[:, j+14] = BP2[:, j+14]
-        self.input_BP_aug[:, 0] = BP2[:, 0]
+            self.input_BP_aug[:, j+14] = b_label[:, j+14]
+        self.input_BP_aug[:, 0] = b_label[:, 0]
 
         input_aug = torch.cat((a_parsing_tensor, self.input_BP_aug), dim=1)
         fake_aug_parsing = self.netG.forward(input_aug)
+        fake_aug_parsing = torch.max(fake_aug_parsing, 1)[1]
+        fake_aug_parsing_rgb = torch.Tensor(decode_labels(fake_aug_parsing)).cuda()
 
-        loss_pose = self.get_parse_loss(self.input_BP_aug, fake_aug_parsing)
+        fake_p2_padded = heatmap_pose.preprocess(fake_aug_parsing_rgb, [256, 256])
+        heatmap = heatmap_pose.process(self.cpm_model, fake_p2_padded, self.mask)
 
-        return loss_pose
+        self.optimizer_G.zero_grad()
+        loss_pose = self.get_parse_loss(self.input_BP_aug, heatmap)
+        loss_pose.backward()
+        self.optimizer_G.step()
 
-    def get_parse_loss(aug_pose, fake_aug_parsing)
-        return
+        return loss_pose, fake_aug_parsing
 
-    def forward_target(self, inputs, infer):
+    def get_parse_loss(self, aug_pose, fake_aug_parsing):
+        t = Variable(aug_pose, requires_grad=False)
+        pl = self.pose_loss(torch.clamp(fake_aug_parsing, min=0, max=1), t)*self.opt.lambda_pose
+        return pl
+
+    def forward_target(self, inputs, infer=False):
         input_all, b_parsing_tensor, _, _,_,_,_,_ = self.encode_input(inputs)
 
         fake_b_parsing_var = self.netG.forward(input_all)
