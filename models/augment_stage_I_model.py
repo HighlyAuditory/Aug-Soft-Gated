@@ -7,6 +7,7 @@ from .base_model import BaseModel
 from . import networks
 from . import losses
 from .inter_skeleton_model import InterSkeleton_Model
+from .skeleton_model import Skeleton_Model
 from . import heatmap_pose
 from .good_order_cood_angle_convert import anglelimbtoxyz2, check_visibility
 import numpy as np
@@ -66,7 +67,8 @@ class Augment_Stage_I_Model(BaseModel):
             torch.backends.cudnn.benchmark = True
         self.isTrain = opt.isTrain
         self.which_epoch = 100
-        self.skeleton_net = InterSkeleton_Model(opt).cuda()
+        # self.skeleton_net = InterSkeleton_Model(opt).cuda()
+        self.skeleton_net = Skeleton_Model(opt).cuda()
 
         netG_input_nc = self.opt.parsing_label_nc + 18
         output_nc = self.opt.parsing_label_nc
@@ -118,7 +120,8 @@ class Augment_Stage_I_Model(BaseModel):
             self.optimizer_D = torch.optim.Adam(params_D, lr=opt.lr, betas=(opt.beta1, 0.999))
 
             # optimizer SK
-            self.optimizer_SK = torch.optim.Adam([self.skeleton_net.alpha], lr=opt.lr , betas=(opt.beta2, 0.999))
+            self.optimizer_SK = torch.optim.Adam(list(self.skeleton_net.parameters()), lr=opt.lr , betas=(opt.beta2, 0.999))
+            # self.optimizer_SK = torch.optim.Adam([self.skeleton_net.alpha], lr=opt.lr , betas=(opt.beta2, 0.999))
             print("models [%s] was initialized" % (self.name()))
 
     def label2onhot(self, b_parsing_tensor):
@@ -161,8 +164,12 @@ class Augment_Stage_I_Model(BaseModel):
         self.skeleton_net.eval()
 
         self.netG.train()
-        _, _, a_parsing_tensor, b_label, a1, a2, offset, limbs = self.encode_input(inputs)
-        aug_angles = self.skeleton_net(a1, a2)
+        input_all, b_parsing_tensor, a_parsing_tensor, b_label, a1, a2, offset, limbs = self.encode_input(inputs)
+        
+        a = torch.cat([a1,a2], dim=1)
+        a = a.transpose(1,2)
+        aug_angles = self.skeleton_net(a).transpose(1,2)
+        # pdb.set_trace()
         # aug_angles = a1
         
         aug_pose = anglelimbtoxyz2(offset, aug_angles, limbs)
@@ -193,7 +200,11 @@ class Augment_Stage_I_Model(BaseModel):
         fake_p2_padded = heatmap_pose.preprocess(fake_aug_parsing_rgb, [256, 256])  # [2,3,368, 368]
         heatmap = heatmap_pose.process(self.cpm_model, fake_p2_padded, self.mask)
 
+        fake_b_parsing_before = self.netG.forward(input_all)
+
         self.optimizer_G.zero_grad()
+        self.loss_G_before, losses = self.get_losses(input_all, b_parsing_tensor, fake_b_parsing_before)
+
         loss_pose = self.get_parse_loss(self.input_BP_aug, heatmap)
         loss_pose.backward()
         self.optimizer_G.step()
@@ -211,7 +222,20 @@ class Augment_Stage_I_Model(BaseModel):
         input_all, b_parsing_tensor, _, _,_,_,_,_ = self.encode_input(inputs)
 
         fake_b_parsing_var = self.netG.forward(input_all)
+        loss_G_after, losses = self.get_losses(input_all, b_parsing_tensor, fake_b_parsing_var)
+        change = loss_G_after - self.loss_G_before
 
+        ############### Backward Pass ####################
+        # update generator weights
+        # model.module.optimizer_SK.zero_grad()
+        change.backward()
+        print(change)
+        self.optimizer_SK.step()
+        self.optimizer_SK.zero_grad()
+
+        return losses, fake_b_parsing_var
+
+    def get_losses(self, input_all, b_parsing_tensor, fake_b_parsing_var):
         loss_D_real, loss_D_fake, loss_G_GAN, loss_G_GAN_Feat = self.getZero(), self.getZero(), self.getZero(), self.getZero()
         if not self.opt.no_GAN_loss:
             loss_D_real, loss_D_fake, loss_G_GAN, loss_G_GAN_Feat = self.get_GAN_losses(self.netD, input_all, b_parsing_tensor, fake_b_parsing_var)
@@ -235,15 +259,7 @@ class Augment_Stage_I_Model(BaseModel):
         loss_D = (loss_dict['D_real'] + loss_dict['D_fake']) * 0.5
         loss_G = loss_dict['G_GAN'] + loss_dict['G_GAN_Feat'] + loss_dict['G_L1']
 
-        ############### Backward Pass ####################
-        # update generator weights
-        # model.module.optimizer_SK.zero_grad()
-        loss_G.backward()
-        print(loss_G)
-        self.optimizer_SK.step()
-
-        return losses, fake_b_parsing_var
-
+        return loss_G, losses
 
     def get_GAN_losses(self, netD, input_label, real_image, fake_image):
         loss_D_fake, loss_D_real, loss_G_GAN, loss_G_GAN_Feat = self.getZero(), self.getZero(), self.getZero(), self.getZero()

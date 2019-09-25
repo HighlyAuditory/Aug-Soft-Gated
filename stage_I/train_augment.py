@@ -67,9 +67,10 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         
         # generator updated correct without colormaping
         # still need to assign train or eval for each model
-        print(model.module.netG.model[-2].bias.grad)
-        print(model.module.skeleton_net.alpha)
-        print(model.module.skeleton_net.alpha.grad)
+        # print(model.module.netG.model[-2].bias.grad)
+        # pdb.set_trace()
+        print(model.module.skeleton_net.main[0].bias)
+        # print(model.module.skeleton_net.alpha.grad)
 
         # update discriminator weights
         # if not opt.no_GAN_loss:
