@@ -25,7 +25,7 @@ class Stage_I_II_Dataset_Penn(BaseDataset):
 
     def __getitem__(self, index):
         a_jpg_path, b_jpg_path, a_parsing_path, b_json_path = self.get_paths(index)
-        print (a_jpg_path, b_jpg_path, a_parsing_path, b_json_path)
+        
         b_label_tensor, b_label_show_tensor = get_label_tensor(b_json_path, b_jpg_path, self.opt)
 
         a_parsing_tensor = get_parsing_label_tensor(a_parsing_path, self.opt)
@@ -61,11 +61,6 @@ class Stage_I_II_Dataset_Penn(BaseDataset):
 
         a_parsing_path = a_jpg_path.replace('penn_action_my/', 'penn_action_my_parsing/')
         b_json_path = b_jpg_path.replace('.png', '_keypoints.json').replace('penn_action_my/', 'penn_action_my_keypoints/')
-
-        print (a_jpg_path)
-        print (b_jpg_path)
-        print (a_parsing_path)
-        print (b_json_path)
         return a_jpg_path, b_jpg_path, a_parsing_path, b_json_path
 
 

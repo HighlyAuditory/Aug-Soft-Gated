@@ -61,34 +61,21 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         b_label_show_tensor = data['b_label_show_tensor']
         
         infer = save_fake
-        model.train()
+        # model.train()
         aug_losses, fake_b_parsing = model.module.forward_augment(data)
         losses, fake_b_parsing = model.module.forward_target(data)
         
-        print(model.module.netG.model[-2].bias)
+        # generator updated correct without colormaping
+        # still need to assign train or eval for each model
+        print(model.module.netG.model[-2].bias.grad)
         print(model.module.skeleton_net.alpha)
         print(model.module.skeleton_net.alpha.grad)
 
-        ### ['G_GAN', 'G_GAN_Feat', 'G_L1', 'D_real', 'D_fake']
-        # sum per device losses
-        losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
-        loss_dict = dict(zip(model.module.loss_names, losses))
-
-        # calculate final loss scalar
-        loss_D = (loss_dict['D_real'] + loss_dict['D_fake']) * 0.5
-        loss_G = loss_dict['G_GAN'] + loss_dict['G_GAN_Feat'] + loss_dict['G_L1']
-
-        ############### Backward Pass ####################
-        # update generator weights
-        model.module.optimizer_G.zero_grad()
-        loss_G.backward()
-        model.module.optimizer_G.step()
-
         # update discriminator weights
-        if not opt.no_GAN_loss:
-            model.module.optimizer_D.zero_grad()
-            loss_D.backward()
-            model.module.optimizer_D.step()
+        # if not opt.no_GAN_loss:
+        #     model.module.optimizer_D.zero_grad()
+        #     loss_D.backward()
+        #     model.module.optimizer_D.step()
 
         ############## Display results and errors ##########
         ### print out errors

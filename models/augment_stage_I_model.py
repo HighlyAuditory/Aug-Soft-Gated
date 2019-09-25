@@ -13,9 +13,9 @@ import numpy as np
 from PIL import Image
 import pdb
 
-label_colours = [(0,0,0)
+label_colours = torch.Tensor([(0,0,0)
                 , (128,0,0), (255,0,0), (0,85,0), (170,0,51), (255,85,0), (0,0,85), (0,119,221), (85,85,0), (0,85,85), (85,51,0), (52,86,128), (0,128,0)
-                , (0,0,255), (51,170,221), (0,255,255), (85,255,170), (170,255,85), (255,255,0), (255,170,0)]
+                , (0,0,255), (51,170,221), (0,255,255), (85,255,170), (170,255,85), (255,255,0), (255,170,0)])
 
 # will be add to some util file later
 def cords_to_map_yx(cords, img_size, sigma=6):
@@ -45,19 +45,16 @@ def decode_labels(mask, num_images=1, num_classes=20):
     Returns:
       A batch with num_images RGB images of the same size as the input.
     """
-    n, h, w = mask.shape
+    n, h, w = mask.size()
     assert (n >= num_images), 'Batch size %d should be greater or equal than number of images to save %d.' % (
     n, num_images)
-    outputs = np.zeros((num_images, h, w, 3), dtype=np.uint8)
-    for i in range(num_images):
-        img = Image.new('RGB', (len(mask[i, 0]), len(mask[i])))
-        pixels = img.load()
+    outputs = torch.zeros((n, h, w, 3))
+    for i in range(n):
         for j_, j in enumerate(mask[i, :, :]):
             for k_, k in enumerate(j):
                 if k < num_classes:
-                    pixels[k_, j_] = label_colours[k]
-        outputs[i] = np.array(img)
-    return outputs.transpose(0,3,1,2)
+                    outputs[i, k_, j_] = label_colours[k]
+    return outputs.transpose(2,3).transpose(1,2)
 
 class Augment_Stage_I_Model(BaseModel):
     def name(self):
@@ -83,6 +80,7 @@ class Augment_Stage_I_Model(BaseModel):
         if self.isTrain:
             cpm_model_path = 'openpose_coco_b16_best.pth.tar'
             self.cpm_model = heatmap_pose.construct_model(cpm_model_path)
+            self.cpm_model.eval()
             self.mask = torch.ones([opt.batchSize, 1, 46, 46]).cuda()
 
         print('---------- Networks initialized -------------')
@@ -160,6 +158,9 @@ class Augment_Stage_I_Model(BaseModel):
         return fake_b_parsing_var
 
     def forward_augment(self, inputs):
+        self.skeleton_net.eval()
+
+        self.netG.train()
         _, _, a_parsing_tensor, b_label, a1, a2, offset, limbs = self.encode_input(inputs)
         aug_angles = self.skeleton_net(a1, a2)
         # aug_angles = a1
@@ -182,11 +183,14 @@ class Augment_Stage_I_Model(BaseModel):
         self.input_BP_aug[:, 0] = b_label[:, 0]
 
         input_aug = torch.cat((a_parsing_tensor, self.input_BP_aug), dim=1)
-        fake_aug_parsing = self.netG.forward(input_aug)
-        fake_aug_parsing = torch.max(fake_aug_parsing, 1)[1]
-        fake_aug_parsing_rgb = torch.Tensor(decode_labels(fake_aug_parsing)).cuda()
+        fake_aug_parsing = self.netG.forward(input_aug) # [2, 20, 256, 256]
 
-        fake_p2_padded = heatmap_pose.preprocess(fake_aug_parsing_rgb, [256, 256])
+        # fake_aug_parsing = torch.max(fake_aug_parsing, 1)[1]
+        # fake_aug_parsing_rgb = decode_labels(fake_aug_parsing).cuda()  # [2, 3, 256, 256]
+
+        fake_aug_parsing_rgb = fake_aug_parsing[:,:3]
+
+        fake_p2_padded = heatmap_pose.preprocess(fake_aug_parsing_rgb, [256, 256])  # [2,3,368, 368]
         heatmap = heatmap_pose.process(self.cpm_model, fake_p2_padded, self.mask)
 
         self.optimizer_G.zero_grad()
@@ -202,6 +206,8 @@ class Augment_Stage_I_Model(BaseModel):
         return pl
 
     def forward_target(self, inputs, infer=False):
+        self.netG.eval()
+        self.skeleton_net.train()
         input_all, b_parsing_tensor, _, _,_,_,_,_ = self.encode_input(inputs)
 
         fake_b_parsing_var = self.netG.forward(input_all)
@@ -218,8 +224,25 @@ class Augment_Stage_I_Model(BaseModel):
         if not self.opt.no_Parsing_loss:
             loss_G_parsing = self.criterionParsingLoss(fake_b_parsing_var, b_parsing_tensor) * self.opt.lambda_Parsing
 
-        return [[ loss_G_GAN, loss_G_GAN_Feat, loss_G_L1, loss_G_parsing, loss_D_real, loss_D_fake], \
-                None if not infer else fake_b_parsing_var ]
+        losses = [ loss_G_GAN, loss_G_GAN_Feat, loss_G_L1, loss_G_parsing, loss_D_real, loss_D_fake]
+
+        ### ['G_GAN', 'G_GAN_Feat', 'G_L1', 'D_real', 'D_fake']
+        # sum per device losses
+        losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
+        loss_dict = dict(zip(self.loss_names, losses))
+
+        # calculate final loss scalar
+        loss_D = (loss_dict['D_real'] + loss_dict['D_fake']) * 0.5
+        loss_G = loss_dict['G_GAN'] + loss_dict['G_GAN_Feat'] + loss_dict['G_L1']
+
+        ############### Backward Pass ####################
+        # update generator weights
+        # model.module.optimizer_SK.zero_grad()
+        loss_G.backward()
+        print(loss_G)
+        self.optimizer_SK.step()
+
+        return losses, fake_b_parsing_var
 
 
     def get_GAN_losses(self, netD, input_label, real_image, fake_image):
