@@ -44,6 +44,7 @@ print('#training images = %d' % dataset_size)
 model = create_model(opt, opt.which_G)
 visualizer = Visualizer(opt)
 
+# pdb.set_trace()
 total_steps = (start_epoch-1) * dataset_size + epoch_iter    
 for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     epoch_start_time = time.time()
@@ -55,21 +56,22 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         iter_start_time = time.time()
         total_steps += opt.batchSize
         epoch_iter += opt.batchSize
-
         # whether to collect output images
         save_fake = total_steps % opt.display_freq == 0
         b_label_show_tensor = data['b_label_show_tensor']
-        
+        a_parsing_tensor = data['a_parsing_tensor']
+        b_parsing_tensor = data['b_parsing_tensor']
+
         infer = save_fake
         # model.train()
         aug_losses, fake_b_parsing = model.module.forward_augment(data)
+        print("netG_param grad={}".format(model.module.netG.model[-2].bias))
         losses, fake_b_parsing = model.module.forward_target(data)
+        losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
+        loss_dict = dict(zip(model.module.loss_names, losses))
+
+        print("sknet params={}".format(model.module.skeleton_net.main[0].bias))
         
-        # generator updated correct without colormaping
-        # still need to assign train or eval for each model
-        # print(model.module.netG.model[-2].bias.grad)
-        # pdb.set_trace()
-        print(model.module.skeleton_net.main[0].bias)
         # print(model.module.skeleton_net.alpha.grad)
 
         # update discriminator weights
@@ -87,17 +89,18 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             visualizer.plot_current_errors(errors, total_steps)
 
         ############## Display output images and Val images ######################
-        # if save_fake:
-            # val_list = get_valList(model, opt)
-            # train_list = [('b_label', tensor2im(b_label_show_tensor[0])),
-            #                ('a_parsing', parsing2im(label_2_onhot(a_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
-            #                ('b_parsing', parsing2im(label_2_onhot(b_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
-            #                ('fake_b_parsing', parsing2im(fake_b_parsing.data[0]))]
-            # val_list[0:0] = train_list
-            # val_list = train_list
-            # visuals = OrderedDict(val_list)
+        if save_fake:
+            val_list = get_valList(model, opt)
+            
+            train_list = [('b_label', tensor2im(b_label_show_tensor[0])),
+                           ('a_parsing', parsing2im(label_2_onhot(a_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
+                           ('b_parsing', parsing2im(label_2_onhot(b_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
+                           ('fake_b_parsing', parsing2im(fake_b_parsing.data[0]))]
+            val_list[0:0] = train_list
+            val_list = train_list
+            visuals = OrderedDict(val_list)
 
-            # visualizer.display_current_results(visuals, epoch, total_steps)
+            visualizer.display_current_results(visuals, epoch, total_steps)
 
 
         ### save latest model

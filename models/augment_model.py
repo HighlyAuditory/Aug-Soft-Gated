@@ -28,7 +28,6 @@ def cords_to_map_yx(cords, img_size, sigma=6):
             xx = xx.float()
             yy = yy.float()
             res = torch.exp(-((yy - point[0]) ** 2 + (xx - point[1] - 40) ** 2) / (2 * sigma ** 2))
-            # pdb.set_trace()
             result[i, j] = res
 
     return result

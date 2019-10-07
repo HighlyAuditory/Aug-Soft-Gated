@@ -80,7 +80,9 @@ class Augment_Stage_I_Model(BaseModel):
             self.netD = networks.define_D(netG_input_nc + output_nc, not opt.no_ganFeat_loss)
 
         if self.isTrain:
-            cpm_model_path = 'openpose_coco_b16_best.pth.tar'
+            cpm_model_path = 'openpose_coco_20channel.pth.tar'
+            # cpm_model_path = 'openpose_coco_b16_best.pth.tar'
+            print("parser model loaded")
             self.cpm_model = heatmap_pose.construct_model(cpm_model_path)
             self.cpm_model.eval()
             self.mask = torch.ones([opt.batchSize, 1, 46, 46]).cuda()
@@ -90,6 +92,7 @@ class Augment_Stage_I_Model(BaseModel):
         # load networks
         if not self.isTrain or opt.continue_train or opt.load_pretrain:
             pretrained_path = '' if not self.isTrain else opt.load_pretrain
+            # pdb.set_trace()
             self.load_network(self.netG, 'G', self.which_epoch, pretrained_path)
             if self.isTrain:
                 self.load_network(self.netD, 'D', self.which_epoch, pretrained_path)
@@ -106,7 +109,7 @@ class Augment_Stage_I_Model(BaseModel):
             self.criterionFeat = torch.nn.L1Loss()
             self.criterionL1 = torch.nn.L1Loss()
             self.criterionParsingLoss = losses.ParsingCrossEntropyLoss(tensor=self.Tensor)
-            self.pose_loss = torch.nn.MSELoss()
+            self.pose_loss = torch.nn.MSELoss(reduction='sum')
 
             self.loss_names = ['G_GAN', 'G_GAN_Feat', 'G_L1', 'G_parsing', 'D_real', 'D_fake']
 
@@ -125,7 +128,6 @@ class Augment_Stage_I_Model(BaseModel):
             print("models [%s] was initialized" % (self.name()))
 
     def label2onhot(self, b_parsing_tensor):
-        # print ("label2onehot b_parsing_tensor", b_parsing_tensor.shape)
         size = b_parsing_tensor.size()
         oneHot_size = (size[0], self.opt.parsing_label_nc, size[2], size[3])
         b_parsing_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
@@ -133,7 +135,19 @@ class Augment_Stage_I_Model(BaseModel):
 
         return b_parsing_label
 
+    def encode_val_enput(self, data, infer=False):
+        a_parsing_tensor = data['a_parsing_tensor'].unsqueeze(0)  # 1
+        b_parsing_tensor = data['b_parsing_tensor'].unsqueeze(0)  # 1
+        b_label_tensor = data['b_label_tensor'].cuda().unsqueeze(0)  # 18 BP2
+        
+        a_parsing_tensor = self.label2onhot(a_parsing_tensor).cuda()
+        b_parsing_tensor = self.label2onhot(b_parsing_tensor).cuda()
+
+        return b_parsing_tensor, a_parsing_tensor, b_label_tensor
+
+
     def encode_input(self, data, infer=False):
+
         a_parsing_tensor = data['a_parsing_tensor']  # 1
         b_parsing_tensor = data['b_parsing_tensor']  # 1
         b_label_tensor = data['b_label_tensor'].cuda()  # 18 BP2
@@ -152,8 +166,8 @@ class Augment_Stage_I_Model(BaseModel):
 
     def inference(self, inputs):
         with torch.no_grad():
-            
-            _, b_parsing_var, a_parsing_var, b_label_var,_,_,_,_ = self.encode_input(inputs, infer=True)
+            # pdb.set_trace()
+            b_parsing_var, a_parsing_var, b_label_var = self.encode_val_enput(inputs, infer=True)
             # self.input_tensor_parse = torch.cat([a_parsing_var, b_label_var], dim=1)
             input_all = torch.cat((a_parsing_var, b_label_var), dim=1)
             fake_b_parsing_var = self.netG.forward(input_all)
@@ -169,7 +183,6 @@ class Augment_Stage_I_Model(BaseModel):
         a = torch.cat([a1,a2], dim=1)
         a = a.transpose(1,2)
         aug_angles = self.skeleton_net(a).transpose(1,2)
-        # pdb.set_trace()
         # aug_angles = a1
         
         aug_pose = anglelimbtoxyz2(offset, aug_angles, limbs)
@@ -179,10 +192,15 @@ class Augment_Stage_I_Model(BaseModel):
             aug_pose[i] = check_visibility(aug_pose[i]) # 2d pose
 
         aug_pose = aug_pose[...,:2]
+        # input 4 radius 1 joints, need to think again
+        # this was the old one
+        self.input_BP_aug = cords_to_map_yx(aug_pose, (256, 256), sigma=4).float().cuda()
 
-        self.input_BP_aug = cords_to_map_yx(aug_pose, (256, 256), sigma=0.4).float().cuda()
+        self.input_BP_aug = (self.input_BP_aug - 0.5) / 0.5
+
         # self.input_BP_aug = BP2
-        self.input_BP_res = cords_to_map_yx(aug_pose, (256, 256), sigma=4).cuda().float()
+        # this is only for visualization
+        # self.input_BP_res = cords_to_map_yx(aug_pose, (256, 256), sigma=4).cuda().float()
 
         # paste skeleton2 face
         for j in range(4):
@@ -195,17 +213,27 @@ class Augment_Stage_I_Model(BaseModel):
         # fake_aug_parsing = torch.max(fake_aug_parsing, 1)[1]
         # fake_aug_parsing_rgb = decode_labels(fake_aug_parsing).cuda()  # [2, 3, 256, 256]
 
-        fake_aug_parsing_rgb = fake_aug_parsing[:,:3]
+        # fake_aug_parsing_rgb = fake_aug_parsing[:,:20]
+        # this cpm goes directly from 20 channels
+        # fake_aug_parsing_rgb = fake_aug_parsing
 
-        fake_p2_padded = heatmap_pose.preprocess(fake_aug_parsing_rgb, [256, 256])  # [2,3,368, 368]
+        fake_p2_padded = heatmap_pose.preprocess(fake_aug_parsing, [256, 256])  # [2,3,368, 368]
+
+        self.cpm_model.eval()
         heatmap = heatmap_pose.process(self.cpm_model, fake_p2_padded, self.mask)
+        heatmap = (heatmap - 0.5) / 0.5
 
+        pdb.set_trace()
         fake_b_parsing_before = self.netG.forward(input_all)
 
         self.optimizer_G.zero_grad()
         self.loss_G_before, losses = self.get_losses(input_all, b_parsing_tensor, fake_b_parsing_before)
+        # should nonrmalize change heatmap
 
+        
         loss_pose = self.get_parse_loss(self.input_BP_aug, heatmap)
+        print("pose loss={}".format(loss_pose))
+        
         loss_pose.backward()
         self.optimizer_G.step()
 
@@ -213,7 +241,7 @@ class Augment_Stage_I_Model(BaseModel):
 
     def get_parse_loss(self, aug_pose, fake_aug_parsing):
         t = Variable(aug_pose, requires_grad=False)
-        pl = self.pose_loss(torch.clamp(fake_aug_parsing, min=0, max=1), t)*self.opt.lambda_pose
+        pl = self.pose_loss(fake_aug_parsing, t)*self.opt.lambda_pose
         return pl
 
     def forward_target(self, inputs, infer=False):
@@ -229,7 +257,7 @@ class Augment_Stage_I_Model(BaseModel):
         # update generator weights
         # model.module.optimizer_SK.zero_grad()
         change.backward()
-        print(change)
+        print("change={}".format(change))
         self.optimizer_SK.step()
         self.optimizer_SK.zero_grad()
 

@@ -20,14 +20,21 @@ def get_test_result(a_jpg_path, b_jpg_path, model, opt):
     # b_parsing_tensor = get_parsing_tensor(b_parsing_path)
     a_parsing_tensor = get_parsing_label_tensor(a_parsing_path, opt)
     b_parsing_tensor = get_parsing_label_tensor(b_parsing_path, opt)
+
     b_label_tensor, b_label_show_tensor = get_label_tensor(b_json_path, b_jpg_path, opt)
     
-    input_tensors = torch.cat((a_parsing_tensor, b_parsing_tensor, b_label_tensor), dim=0)
-    input_var = Variable(input_tensors[None, :, :, :].type(torch.cuda.FloatTensor))  ##torch.FloatTensor of size (1,34,256,256)
+    input_dict = {
+            'b_label_tensor': b_label_tensor, \
+            'a_parsing_tensor': a_parsing_tensor, \
+            'b_parsing_tensor': b_parsing_tensor, \
+            'b_label_show_tensor': b_label_show_tensor}
 
+    # input_tensors = torch.cat((a_parsing_tensor, b_parsing_tensor, b_label_tensor), dim=0)
+    # input_var = Variable(input_tensors[None, :, :, :].type(torch.cuda.FloatTensor))  ##torch.FloatTensor of size (1,34,256,256)
+    # pdb.set_trace()
     model.eval()
     if opt.isTrain:
-        fake_b_parsing = model.module.inference(input_var)
+        fake_b_parsing = model.module.inference(input_dict)
     else:
         fake_b_parsing = model.inference(input_var)
 

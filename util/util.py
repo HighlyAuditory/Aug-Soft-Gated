@@ -39,8 +39,10 @@ def label_2_onhot(b_parsing_tensor, parsing_label_nc=20):
     size = b_parsing_tensor.size()
     oneHot_size = (parsing_label_nc, size[1], size[2])
     b_parsing_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
+    # [index[i][j][k]][j][k] = src[i][j][k]
+    # scatter_(dim, index, src) → Tensor
     b_parsing_label = b_parsing_label.scatter_(0, b_parsing_tensor.long().cuda(), 1.0)
-
+    
     return b_parsing_label
 
 def parsing2im(parsing, imtype=np.uint8):
@@ -50,7 +52,6 @@ def parsing2im(parsing, imtype=np.uint8):
     for h in range(image_index.shape[0]):
         for w in range(image_index.shape[1]):
             parsing_numpy[h, w, :] = CMAP[image_index[h, w]]
-
 
     return parsing_numpy.astype(imtype)
 

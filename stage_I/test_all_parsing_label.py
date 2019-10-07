@@ -34,8 +34,8 @@ opt.no_flip = True  # no flip
 
 data_loader = CreateDataLoader(opt)
 dataset = data_loader.load_data()
-pdb.set_trace()
-model = create_model(opt)
+
+model = create_model(opt,'resNet')
 visualizer = Visualizer(opt)
 dataset_size = len(data_loader)
 print('#testing images = %d' % dataset_size)
@@ -48,7 +48,7 @@ def main():
     for i, data in enumerate(dataset):
         if i >= opt.how_many:
             break
-
+        
         a_parsing_tensor = data['a_parsing_tensor']
         b_parsing_tensor = data['b_parsing_tensor']
         b_label_tensor = data['b_label_tensor']
@@ -58,7 +58,7 @@ def main():
 
         input_tensor = torch.cat((a_parsing_tensor, b_parsing_tensor, b_label_tensor), dim=1)
         input_var = Variable(input_tensor.type(torch.cuda.FloatTensor))
-
+        
         fake_b_parsing = model.inference(input_var)
         test_list = [('b_label_show', util.tensor2im(b_label_show_tensor[0])),
                       ('a_parsing_tensor_RGB', util.parsing2im(util.label_2_onhot(a_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
@@ -66,7 +66,7 @@ def main():
                       ('b_parsing_tensor_RGB', util.parsing2im(util.label_2_onhot(b_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
                      ('fake_b_parsing', util.parsing_2_onechannel(fake_b_parsing.data[0])),
                      ]
-
+        
         print fake_b_parsing.shape
         ### save image
         visuals = OrderedDict(test_list)

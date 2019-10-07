@@ -16,14 +16,15 @@ class Stage_I_Augment_Dataset(BaseDataset):
         if not opt.serial_batches:
             random.shuffle(self.path_pairs)
         self.dataset_size = len(self.path_pairs)
-      
+        
+
     def __getitem__(self, index):
         a_jpg_path, b_jpg_path, a_parsing_path, b_parsing_path, a_json_path, b_json_path, a_3d_path, b_3d_path =  self.get_paths(index)
 
         a_parsing_tensor = get_parsing_label_tensor(a_parsing_path, self.opt)
         b_parsing_tensor = get_parsing_label_tensor(b_parsing_path, self.opt)
 
-        a_label_tensor = get_label_tensor(a_json_path, a_jpg_path, self.opt)
+        a_label_tensor,_ = get_label_tensor(a_json_path, a_jpg_path, self.opt)
         b_label_tensor, b_label_show_tensor = get_label_tensor(b_json_path, b_jpg_path, self.opt)
 
         Kd1, Kd2 = np.load(a_3d_path,allow_pickle=True).item(), np.load(a_3d_path,allow_pickle=True).item()

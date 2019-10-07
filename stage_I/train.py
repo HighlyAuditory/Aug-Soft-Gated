@@ -51,6 +51,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
 
     # count = 0
     for i, data in enumerate(dataset, start=epoch_iter):
+
         iter_start_time = time.time()
         total_steps += opt.batchSize
         epoch_iter += opt.batchSize
@@ -62,7 +63,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         b_parsing_tensor = data['b_parsing_tensor']
         b_label_tensor = data['b_label_tensor']
         b_label_show_tensor = data['b_label_show_tensor']
-
+        pdb.set_trace()
         input_tensor = torch.cat((a_parsing_tensor, b_parsing_tensor, b_label_tensor), dim=1)
         input_var = Variable(input_tensor.type(torch.cuda.FloatTensor))
 
@@ -74,7 +75,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         # sum per device losses
         losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
         loss_dict = dict(zip(model.module.loss_names, losses))
-
+        
         # calculate final loss scalar
         loss_D = (loss_dict['D_real'] + loss_dict['D_fake']) * 0.5
         loss_G = loss_dict['G_GAN'] + loss_dict['G_GAN_Feat'] + loss_dict['G_L1']

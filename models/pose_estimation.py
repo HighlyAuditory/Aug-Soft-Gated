@@ -120,7 +120,7 @@ class Pose_Estimation(nn.Module):
 def PoseModel(num_point, num_vector, num_stages=6, batch_norm=False, pretrained=False):
 
     net_dict = []
-    block0 = [{'conv1_1': [3, 64, 3, 1, 1]}, {'conv1_2': [64, 64, 3, 1, 1]}, {'pool1': [2, 2, 0]},
+    block0 = [{'conv1_1': [20, 64, 3, 1, 1]}, {'conv1_2': [64, 64, 3, 1, 1]}, {'pool1': [2, 2, 0]},
             {'conv2_1': [64, 128, 3, 1, 1]}, {'conv2_2': [128, 128, 3, 1, 1]}, {'pool2': [2, 2, 0]},
             {'conv3_1': [128, 256, 3, 1, 1]}, {'conv3_2': [256, 256, 3, 1, 1]}, {'conv3_3': [256, 256, 3, 1, 1]}, {'conv3_4': [256, 256, 3, 1, 1]}, {'pool3': [2, 2, 0]},
             {'conv4_1': [256, 512, 3, 1, 1]}, {'conv4_2': [512, 512, 3, 1, 1]}, {'conv4_3_cpm': [512, 256, 3, 1, 1]}, {'conv4_4_cpm': [256, 128, 3, 1, 1]}]

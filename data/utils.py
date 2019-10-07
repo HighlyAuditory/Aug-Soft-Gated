@@ -79,14 +79,12 @@ def get_parsing_label_tensor(parsing_path, opt):
 
     return label_tensor
 
-
 def get_label_tensor(json_path, jpg_path, opt):
+    # 0 ~ 256
     image_a = Image.open(jpg_path).convert('RGB')
     params = get_params(opt, image_a.size)
     transform_image = get_transform(opt, params)
-    print(json_path)
     points = get_points(json_path)
-
     label_18chnl_tensor = draw_18chnl_points(points, transform_image)
     ### b 18 point show
     label_show = draw_points(points)

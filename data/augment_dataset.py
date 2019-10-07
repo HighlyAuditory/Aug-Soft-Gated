@@ -30,6 +30,8 @@ class Augment_Dataset(BaseDataset):
         self.dataset_size = len(self.path_pairs)
         self.dir_json = os.path.join('/home/wenwens/Documents/HumanPose/Pose-Transfer-pose3d-normed/fashion_data', opt.phase + '_3d_top_ordered') #keypoints
 
+        
+
     def __getitem__(self, index):
         # \wenwen{need rewrite after generate all training pairs}
         a_jpg_path, b_jpg_path, a_parsing_path, b_parsing_path, b_json_path, a_json_path = self.get_paths(index)
@@ -44,6 +46,7 @@ class Augment_Dataset(BaseDataset):
         b_label_tensor, b_label_show_tensor = get_label_tensor(b_json_path, b_jpg_path, self.opt)
         a_label_tensor, _ = get_label_tensor(a_json_path, a_jpg_path, self.opt)
 
+        # why label tensor is all -1 ?? 
         a_parsing_tensor = get_parsing_label_tensor(a_parsing_path, self.opt)
         b_parsing_tensor = get_parsing_label_tensor(b_parsing_path, self.opt)
         a_image_tensor = get_image_tensor(a_jpg_path, self.opt)
