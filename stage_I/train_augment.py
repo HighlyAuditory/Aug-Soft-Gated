@@ -44,7 +44,6 @@ print('#training images = %d' % dataset_size)
 model = create_model(opt, opt.which_G)
 visualizer = Visualizer(opt)
 
-# pdb.set_trace()
 total_steps = (start_epoch-1) * dataset_size + epoch_iter    
 for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     epoch_start_time = time.time()
@@ -61,16 +60,21 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         b_label_show_tensor = data['b_label_show_tensor']
         a_parsing_tensor = data['a_parsing_tensor']
         b_parsing_tensor = data['b_parsing_tensor']
-
+        pdb.set_trace()
         infer = save_fake
         # model.train()
-        aug_losses, fake_b_parsing = model.module.forward_augment(data)
-        print("netG_param grad={}".format(model.module.netG.model[-2].bias))
-        losses, fake_b_parsing = model.module.forward_target(data)
+        aug_losses, fake_b_parsing, aug_pose = model.module.forward_augment(data)
+
+        print("netG_param grad={}".format(model.module.netG.model[-2].bias.grad))
+        losses, fake_b_parsing_target = model.module.forward_target(data)
         losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
         loss_dict = dict(zip(model.module.loss_names, losses))
 
         print("sknet params={}".format(model.module.skeleton_net.main[0].bias))
+
+        from data.utils import get_label_tensor_from_kpts
+        # pdb.set_trace()
+        label_18chnl_tensor= get_label_tensor_from_kpts(aug_pose, './aug_pose.jpg', opt)
         
         # print(model.module.skeleton_net.alpha.grad)
 
@@ -91,8 +95,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         ############## Display output images and Val images ######################
         if save_fake:
             val_list = get_valList(model, opt)
-            
-            train_list = [('b_label', tensor2im(b_label_show_tensor[0])),
+            train_list = [('b_label', tensor2im(label_18chnl_tensor)), #[('b_label', tensor2im(label_18chnl_tensor)),
                            ('a_parsing', parsing2im(label_2_onhot(a_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
                            ('b_parsing', parsing2im(label_2_onhot(b_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
                            ('fake_b_parsing', parsing2im(fake_b_parsing.data[0]))]

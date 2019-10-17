@@ -90,8 +90,15 @@ def get_label_tensor(json_path, jpg_path, opt):
     label_show = draw_points(points)
     label_show_tensor = transform_image(label_show)
 
-    return label_18chnl_tensor, label_show_tensor
+    return label_18chnl_tensor, label_show_tensor, points
 
+def get_label_tensor_from_kpts(kpts, jpg_path, opt):
+    params = get_params(opt, np.array([256, 256]))
+    transform_image = get_transform(opt, params)
+    label_show = draw_points(kpts)
+    label_show_tensor = transform_image(label_show)
+
+    return label_show_tensor
 
 def get_parsing_parts(parsing_path, jpg_path, opt):
     image = Image.open(jpg_path).convert('RGB')

@@ -152,6 +152,7 @@ class Augment_Stage_I_Model(BaseModel):
     def inference(self, inputs):
         with torch.no_grad():
             b_parsing_var, a_parsing_var, b_label_var = self.encode_val_enput(inputs, infer=True)
+            # self.input_tensor_parse = torch.cat([a_parsing_var, b_label_var], dim=1)
             input_all = torch.cat((a_parsing_var, b_label_var), dim=1)
             fake_b_parsing_var = self.netG.forward(input_all)
 
@@ -200,10 +201,14 @@ class Augment_Stage_I_Model(BaseModel):
 
         fake_b_parsing_before = self.netG.forward(input_all)
 
+        self.optimizer_G.zero_grad()
+        self.loss_G_before, losses = self.get_losses(input_all, b_parsing_tensor, fake_b_parsing_before)
         # should nonrmalize change heatmap
+
         loss_pose = self.get_parse_loss(self.input_BP_aug, heatmap)
         print("pose loss={}".format(loss_pose))
         loss_pose.backward()
+        pdb.set_trace()
         self.optimizer_G.step()
 
         return loss_pose, fake_aug_parsing, aug_pose[0].flatten()
@@ -220,11 +225,13 @@ class Augment_Stage_I_Model(BaseModel):
 
         fake_b_parsing_var = self.netG.forward(input_all)
         loss_G_after, losses = self.get_losses(input_all, b_parsing_tensor, fake_b_parsing_var)
+        change = loss_G_after - self.loss_G_before
 
         ############### Backward Pass ####################
         # update generator weights
-        model.module.optimizer_SK.zero_grad()
-        loss_G_after.backward()
+        # model.module.optimizer_SK.zero_grad()
+        change.backward()
+        print("change={}".format(change))
         self.optimizer_SK.step()
         self.optimizer_SK.zero_grad()
 

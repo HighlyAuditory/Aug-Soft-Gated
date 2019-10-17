@@ -21,7 +21,7 @@ def get_test_result(a_jpg_path, b_jpg_path, model, opt):
     a_parsing_tensor = get_parsing_label_tensor(a_parsing_path, opt)
     b_parsing_tensor = get_parsing_label_tensor(b_parsing_path, opt)
 
-    b_label_tensor, b_label_show_tensor = get_label_tensor(b_json_path, b_jpg_path, opt)
+    b_label_tensor, b_label_show_tensor,_ = get_label_tensor(b_json_path, b_jpg_path, opt)
     
     input_dict = {
             'b_label_tensor': b_label_tensor, \

@@ -12,12 +12,10 @@ import cv2
 import pdb
 
 def preprocess(origin_img, image_size):
-    normed_img = 0.5 * (origin_img - 0.5)
+    normed_img =  (origin_img - 0.5) / 0.5
     height, width = image_size
     scale = 368.0 / height  # boxsize
     imgToTest = F.upsample(normed_img, scale_factor=(scale, scale), mode='bicubic')
-    # pdb.set_trace()
-    # imgToTest_padded = torch.zeros([origin_img.shape[0], 3, 368, 368]).cuda()
     imgToTest_padded = imgToTest
 
     return imgToTest_padded
@@ -37,14 +35,13 @@ def construct_model(model_path):
     from collections import OrderedDict
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
-        # if 'fc' not in k:
-        name = k[7:]
-        new_state_dict[name] = v
-    pdb.set_trace()
+        if 'fc' not in k:
+            name = k[7:]
+            new_state_dict[name] = v
     state_dict = model.state_dict()
     state_dict.update(new_state_dict)
     model.load_state_dict(state_dict)
     model = model.cuda()
-    model.eval()
+    # model.eval()
 
     return model

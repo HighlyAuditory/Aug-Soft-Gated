@@ -17,20 +17,20 @@ class Pose_Estimation(nn.Module):
         self.model1_1 = self._make_layer(net_dict[1][0], batch_norm)
         self.model1_2 = self._make_layer(net_dict[1][1], batch_norm)
 
-        self.model2_1 = self._make_layer(net_dict[2][0], batch_norm)
-        self.model2_2 = self._make_layer(net_dict[2][1], batch_norm)
+        # self.model2_1 = self._make_layer(net_dict[2][0], batch_norm)
+        # self.model2_2 = self._make_layer(net_dict[2][1], batch_norm)
 
-        self.model3_1 = self._make_layer(net_dict[3][0], batch_norm)
-        self.model3_2 = self._make_layer(net_dict[3][1], batch_norm)
+        # self.model3_1 = self._make_layer(net_dict[3][0], batch_norm)
+        # self.model3_2 = self._make_layer(net_dict[3][1], batch_norm)
 
-        self.model4_1 = self._make_layer(net_dict[4][0], batch_norm)
-        self.model4_2 = self._make_layer(net_dict[4][1], batch_norm)
+        # self.model4_1 = self._make_layer(net_dict[4][0], batch_norm)
+        # self.model4_2 = self._make_layer(net_dict[4][1], batch_norm)
 
-        self.model5_1 = self._make_layer(net_dict[5][0], batch_norm)
-        self.model5_2 = self._make_layer(net_dict[5][1], batch_norm)
+        # self.model5_1 = self._make_layer(net_dict[5][0], batch_norm)
+        # self.model5_2 = self._make_layer(net_dict[5][1], batch_norm)
 
-        self.model6_1 = self._make_layer(net_dict[6][0], batch_norm)
-        self.model6_2 = self._make_layer(net_dict[6][1], batch_norm)
+        # self.model6_1 = self._make_layer(net_dict[6][0], batch_norm)
+        # self.model6_2 = self._make_layer(net_dict[6][1], batch_norm)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -87,36 +87,36 @@ class Pose_Estimation(nn.Module):
         out1_vec_mask = out1_1 * mask
         out1_heat_mask = out1_2 * mask
 
-        out2_1 = self.model2_1(out1)
-        out2_2 = self.model2_2(out1)
-        out2 = torch.cat([out2_1, out2_2, out0], 1)
-        out2_vec_mask = out2_1 * mask
-        out2_heat_mask = out2_2 * mask
+        # out2_1 = self.model2_1(out1)
+        # out2_2 = self.model2_2(out1)
+        # out2 = torch.cat([out2_1, out2_2, out0], 1)
+        # out2_vec_mask = out2_1 * mask
+        # out2_heat_mask = out2_2 * mask
         
-        out3_1 = self.model3_1(out2)
-        out3_2 = self.model3_2(out2)
-        out3 = torch.cat([out3_1, out3_2, out0], 1)
-        out3_vec_mask = out3_1 * mask
-        out3_heat_mask = out3_2 * mask
+        # out3_1 = self.model3_1(out2)
+        # out3_2 = self.model3_2(out2)
+        # out3 = torch.cat([out3_1, out3_2, out0], 1)
+        # out3_vec_mask = out3_1 * mask
+        # out3_heat_mask = out3_2 * mask
 
-        out4_1 = self.model4_1(out3)
-        out4_2 = self.model4_2(out3)
-        out4 = torch.cat([out4_1, out4_2, out0], 1)
-        out4_vec_mask = out4_1 * mask
-        out4_heat_mask = out4_2 * mask
+        # out4_1 = self.model4_1(out3)
+        # out4_2 = self.model4_2(out3)
+        # out4 = torch.cat([out4_1, out4_2, out0], 1)
+        # out4_vec_mask = out4_1 * mask
+        # out4_heat_mask = out4_2 * mask
 
-        out5_1 = self.model5_1(out4)
-        out5_2 = self.model5_2(out4)
-        out5 = torch.cat([out5_1, out5_2, out0], 1)
-        out5_vec_mask = out5_1 * mask
-        out5_heat_mask = out5_2 * mask
+        # out5_1 = self.model5_1(out4)
+        # out5_2 = self.model5_2(out4)
+        # out5 = torch.cat([out5_1, out5_2, out0], 1)
+        # out5_vec_mask = out5_1 * mask
+        # out5_heat_mask = out5_2 * mask
 
-        out6_1 = self.model6_1(out5)
-        out6_2 = self.model6_2(out5)
-        out6_vec_mask = out6_1 * mask
-        out6_heat_mask = out6_2 * mask
+        # out6_1 = self.model6_1(out5)
+        # out6_2 = self.model6_2(out5)
+        # out6_vec_mask = out6_1 * mask
+        # out6_heat_mask = out6_2 * mask
         
-        return out1_vec_mask, out1_heat_mask, out2_vec_mask, out2_heat_mask, out3_vec_mask, out3_heat_mask, out4_vec_mask, out4_heat_mask, out5_vec_mask, out5_heat_mask, out6_vec_mask, out6_heat_mask
+        return out1_vec_mask, out1_heat_mask#, out2_vec_mask, out2_heat_mask, out3_vec_mask, out3_heat_mask, out4_vec_mask, out4_heat_mask, out5_vec_mask, out5_heat_mask, out6_vec_mask, out6_heat_mask
 
 def PoseModel(num_point, num_vector, num_stages=6, batch_norm=False, pretrained=False):
 
