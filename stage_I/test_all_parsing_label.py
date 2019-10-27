@@ -55,7 +55,7 @@ def main():
         b_label_show_tensor = data['b_label_show_tensor']
         a_jpg_path = data['a_img_path']
         b_jpg_path = data['b_img_path']
-
+        pdb.set_trace()
         input_tensor = torch.cat((a_parsing_tensor, b_parsing_tensor, b_label_tensor), dim=1)
         input_var = Variable(input_tensor.type(torch.cuda.FloatTensor))
         
