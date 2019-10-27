@@ -13,6 +13,7 @@ from .good_order_cood_angle_convert import anglelimbtoxyz2, check_visibility
 import numpy as np
 from PIL import Image
 import pdb
+import matplotlib.pyplot as plt
 
 label_colours = torch.Tensor([(0,0,0)
                 , (128,0,0), (255,0,0), (0,85,0), (170,0,51), (255,85,0), (0,0,85), (0,119,221), (85,85,0), (0,85,85), (85,51,0), (52,86,128), (0,128,0)
@@ -45,8 +46,7 @@ class Augment_Stage_I_Model(BaseModel):
             torch.backends.cudnn.benchmark = True
         self.isTrain = opt.isTrain
         self.which_epoch = 100
-        # self.skeleton_net = InterSkeleton_Model(opt).cuda()
-        self.skeleton_net = Skeleton_Model(opt).cuda()
+        self.skeleton_net = InterSkeleton_Model(opt).cuda()
 
         netG_input_nc = self.opt.parsing_label_nc + 18
         output_nc = self.opt.parsing_label_nc
@@ -59,15 +59,11 @@ class Augment_Stage_I_Model(BaseModel):
             self.netD = networks.define_D(netG_input_nc + output_nc, not opt.no_ganFeat_loss)
 
         if self.isTrain:
-            cpm_model_path = 'openpose_coco_20channel.pth.tar'
-            # cpm_model_path = 'openpose_coco_latest.pth.tar'
-            # cpm_model_path = 'openpose_coco_example.tar'
-            # cpm_model_path = 'openpose_coco_20channel_example.pth.tar'
-            # cpm_model_path = 'openpose_coco_b16_best.pth.tar'
+            cpm_model_path = 'openpose_coco_20channel.tar'
             print("parser model loaded")
             self.cpm_model = heatmap_pose.construct_model(cpm_model_path)
-            # for param in self.cpm_model.parameters():
-            #     param.requires_grad = False
+            for param in self.cpm_model.parameters():
+                param.requires_grad = False
             self.cpm_model.eval()
             self.mask = torch.ones([opt.batchSize, 1, 46, 46]).cuda()
 
@@ -94,7 +90,7 @@ class Augment_Stage_I_Model(BaseModel):
             self.criterionFeat = torch.nn.L1Loss()
             self.criterionL1 = torch.nn.L1Loss()
             self.criterionParsingLoss = losses.ParsingCrossEntropyLoss(tensor=self.Tensor)
-            self.pose_loss = torch.nn.MSELoss(reduction='sum')
+            self.pose_loss = torch.nn.MSELoss()
 
             self.loss_names = ['G_GAN', 'G_GAN_Feat', 'G_L1', 'G_parsing', 'D_real', 'D_fake']
 
@@ -108,8 +104,8 @@ class Augment_Stage_I_Model(BaseModel):
             self.optimizer_D = torch.optim.Adam(params_D, lr=opt.lr, betas=(opt.beta1, 0.999))
 
             # optimizer SK
-            self.optimizer_SK = torch.optim.Adam(list(self.skeleton_net.parameters()), lr=opt.lr , betas=(opt.beta2, 0.999))
-            # self.optimizer_SK = torch.optim.Adam([self.skeleton_net.alpha], lr=opt.lr , betas=(opt.beta2, 0.999))
+            # self.optimizer_SK = torch.optim.Adam(list(self.skeleton_net.parameters()), lr=opt.lr , betas=(opt.beta2, 0.999))
+            self.optimizer_SK = torch.optim.Adam([self.skeleton_net.alpha], lr=opt.lr , betas=(opt.beta2, 0.999))
             print("models [%s] was initialized" % (self.name()))
 
     def label2onhot(self, b_parsing_tensor):
@@ -162,55 +158,47 @@ class Augment_Stage_I_Model(BaseModel):
 
         self.netG.train()
         input_all, b_parsing_tensor, a_parsing_tensor, b_label, a1, a2, offset, limbs = self.encode_input(inputs)
-        
-        a = torch.cat([a1,a2], dim=1)
-        a = a.transpose(1,2)
-        aug_angles = self.skeleton_net(a).transpose(1,2)
+
+        aug_angles = self.skeleton_net(a1, a2)
         
         aug_pose = anglelimbtoxyz2(offset, aug_angles, limbs)
 
         for i in range(b_label.shape[0]):
             aug_pose[i] = check_visibility(aug_pose[i]) # 2d pose
 
-        # input 4 radius 1 joints, need to think again
-        # this was the old one
-        self.input_BP_aug = cords_to_map_yx(aug_pose[...,:2], (256, 256), sigma=4).float().cuda()
-
+        self.input_BP_aug = cords_to_map_yx(aug_pose[...,:2], (256, 256), sigma=4).float().cuda() / 256
         self.input_BP_aug = (self.input_BP_aug - 0.5) / 0.5
-
-        # this is only for visualization
-        # self.input_BP_res = cords_to_map_yx(aug_pose, (256, 256), sigma=4).cuda().float()
-
-        # paste skeleton2 face
+        # (-1, -0.9922)
         for j in range(4):
             self.input_BP_aug[:, j+14] = b_label[:, j+14]
         self.input_BP_aug[:, 0] = b_label[:, 0]
 
         input_aug = torch.cat((a_parsing_tensor, self.input_BP_aug), dim=1)
         fake_aug_parsing = self.netG.forward(input_aug) # [2, 20, 256, 256]
-        # pdb.set_trace()
         fake_aug_parsing = (fake_aug_parsing - fake_aug_parsing.min()) / (fake_aug_parsing.max() - fake_aug_parsing.min())
-        fake_aug_parsing = fake_aug_parsing[0].transpose(0,1).transpose(1,2)
-        fake_aug_parsing = torch.mm(fake_aug_parsing.view(-1,20) , label_colours)
-        fake_aug_parsing.view(256, 256, -1)
+    
         fake_p2_padded = heatmap_pose.preprocess(fake_aug_parsing, [256, 256])  # [2,3,368, 368]
 
+        # fakep2 padded shuld be -0.5 0.5 should be 
         heatmap = heatmap_pose.process(self.cpm_model, fake_p2_padded, self.mask)
-        heatmap = (heatmap - 0.5) / 0.5
+        # output heatmap should be 0 to 1
 
         fake_b_parsing_before = self.netG.forward(input_all)
+        self.loss_G_before, losses = self.get_losses(input_all, b_parsing_tensor, fake_b_parsing_before)
+        # should nonrmalize change heatmap 
 
-        # should nonrmalize change heatmap
-        loss_pose = self.get_parse_loss(self.input_BP_aug, heatmap)
+        aug_pose_target = (self.input_BP_aug * 0.5 + 0.5) *256
+        loss_pose = self.get_parse_loss(aug_pose_target, heatmap )
         print("pose loss={}".format(loss_pose))
+        
         loss_pose.backward()
         self.optimizer_G.step()
 
-        return loss_pose, fake_aug_parsing, aug_pose[0].flatten()
+        return loss_pose, fake_aug_parsing, aug_pose[0].flatten(), heatmap
 
     def get_parse_loss(self, aug_pose, fake_aug_parsing):
         t = Variable(aug_pose, requires_grad=False)
-        pl = self.pose_loss(fake_aug_parsing, t)*self.opt.lambda_pose
+        pl = self.pose_loss(fake_aug_parsing, t)
         return pl
 
     def forward_target(self, inputs, infer=False):
@@ -223,9 +211,14 @@ class Augment_Stage_I_Model(BaseModel):
 
         ############### Backward Pass ####################
         # update generator weights
-        model.module.optimizer_SK.zero_grad()
-        loss_G_after.backward()
+        # model.module.optimizer_SK.zero_grad()
+        change = loss_G_after - self.loss_G_before
+
+        change.backward()
         self.optimizer_SK.step()
+        # print("sknet params={}".format(self.skeleton_net.main[0].bias.grad))
+        print("sknet params={}".format(self.skeleton_net.alpha))
+
         self.optimizer_SK.zero_grad()
 
         return losses, fake_b_parsing_var

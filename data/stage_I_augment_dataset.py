@@ -16,6 +16,20 @@ class Stage_I_Augment_Dataset(BaseDataset):
         if not opt.serial_batches:
             random.shuffle(self.path_pairs)
         self.dataset_size = len(self.path_pairs)
+
+        a_jpg_path, b_jpg_path, a_parsing_path, b_parsing_path, a_json_path, b_json_path, a_3d_path, b_3d_path =  self.get_paths(1)
+
+        a_parsing_tensor = get_parsing_label_tensor(a_parsing_path, self.opt)
+        b_parsing_tensor = get_parsing_label_tensor(b_parsing_path, self.opt)
+
+        a_label_tensor,a_label_show_tensor,_ = get_label_tensor(a_json_path, a_jpg_path, self.opt)
+        b_label_tensor, b_label_show_tensor,points = get_label_tensor(b_json_path, b_jpg_path, self.opt)
+
+        Kd1, Kd2 = np.load(a_3d_path,allow_pickle=True).item(), np.load(b_3d_path,allow_pickle=True).item()
+        K1, K2 = Kd1['absolute_angles'], Kd2['absolute_angles']
+        L2, F2 = Kd2['limbs'], Kd2['offset'].squeeze()
+        L1, F1 = Kd1['limbs'], Kd1['offset'].squeeze()
+
         
 
     def __getitem__(self, index):
@@ -24,7 +38,7 @@ class Stage_I_Augment_Dataset(BaseDataset):
         a_parsing_tensor = get_parsing_label_tensor(a_parsing_path, self.opt)
         b_parsing_tensor = get_parsing_label_tensor(b_parsing_path, self.opt)
 
-        a_label_tensor,_,_ = get_label_tensor(a_json_path, a_jpg_path, self.opt)
+        a_label_tensor,a_label_show_tensor,_ = get_label_tensor(a_json_path, a_jpg_path, self.opt)
         b_label_tensor, b_label_show_tensor,points = get_label_tensor(b_json_path, b_jpg_path, self.opt)
 
         Kd1, Kd2 = np.load(a_3d_path,allow_pickle=True).item(), np.load(b_3d_path,allow_pickle=True).item()
@@ -33,6 +47,7 @@ class Stage_I_Augment_Dataset(BaseDataset):
         L1, F1 = Kd1['limbs'], Kd1['offset'].squeeze()
 
         input_dict = {'a_parsing_tensor': a_parsing_tensor,\
+                        'a_label_show_tensor': a_label_show_tensor,\
                       'b_parsing_tensor': b_parsing_tensor, \
                       'points': points,\
                       'a_label_tensor': a_label_tensor,

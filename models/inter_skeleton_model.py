@@ -28,8 +28,7 @@ class InterSkeleton_Model(BaseModel):
                 print(alpha_path)
 
     def forward(self, input1, input2):
-        # self.alpha_clipped = torch.clamp(self.alpha, 0.0, 1.0)
-        self.alpha_clipped = self.alpha
+        self.alpha_clipped = torch.clamp(self.alpha, 0.0, 1.0)
         out = self.alpha_clipped * input1 + (1 - self.alpha_clipped) * input2
         return out
 

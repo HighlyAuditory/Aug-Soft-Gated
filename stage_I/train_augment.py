@@ -58,24 +58,31 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         # whether to collect output images
         save_fake = total_steps % opt.display_freq == 0
         b_label_show_tensor = data['b_label_show_tensor']
+        a_label_show_tensor = data['a_label_show_tensor']
         a_parsing_tensor = data['a_parsing_tensor']
         b_parsing_tensor = data['b_parsing_tensor']
-        pdb.set_trace()
+        
         infer = save_fake
         # model.train()
-        aug_losses, fake_b_parsing, aug_pose = model.module.forward_augment(data)
+        aug_losses, fake_b_parsing, aug_pose, heatmap = model.module.forward_augment(data)
+        print(heatmap.shape)
+        kpts = []
+        for i in range(18):
+            idx = torch.argmax(heatmap[0,i])
+            w, h = idx // 256, idx % 256
+            kpts.append(np.array([w, h, 0]))
 
+        kpts = np.array(kpts).flatten()
+        # pdb.set_trace()
         print("netG_param grad={}".format(model.module.netG.model[-2].bias.grad))
         losses, fake_b_parsing_target = model.module.forward_target(data)
         losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
         loss_dict = dict(zip(model.module.loss_names, losses))
 
-        print("sknet params={}".format(model.module.skeleton_net.main[0].bias))
-
-        from data.utils import get_label_tensor_from_kpts
-        # pdb.set_trace()
-        label_18chnl_tensor= get_label_tensor_from_kpts(aug_pose, './aug_pose.jpg', opt)
         
+        from data.utils import get_label_tensor_from_kpts
+        label_18chnl_tensor= get_label_tensor_from_kpts(aug_pose, './aug_pose.jpg', opt)
+        reparse_show_tensor = get_label_tensor_from_kpts(kpts, './reparse,jpg', opt)
         # print(model.module.skeleton_net.alpha.grad)
 
         # update discriminator weights
@@ -95,7 +102,11 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         ############## Display output images and Val images ######################
         if save_fake:
             val_list = get_valList(model, opt)
-            train_list = [('b_label', tensor2im(label_18chnl_tensor)), #[('b_label', tensor2im(label_18chnl_tensor)),
+            # pdb.set_trace()
+            train_list = [('reparse', tensor2im(reparse_show_tensor.detach())),
+                        ('a_label', tensor2im(a_label_show_tensor[0])),
+                        ('b_label', tensor2im(b_label_show_tensor[0])),
+                        ('aug_label', tensor2im(label_18chnl_tensor)), #[('b_label', tensor2im(label_18chnl_tensor)),
                            ('a_parsing', parsing2im(label_2_onhot(a_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
                            ('b_parsing', parsing2im(label_2_onhot(b_parsing_tensor[0], parsing_label_nc=opt.parsing_label_nc))),
                            ('fake_b_parsing', parsing2im(fake_b_parsing.data[0]))]

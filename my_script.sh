@@ -1,3 +1,7 @@
+# augment stage I
+CUDA_VISIBLE_DEVICES=0 python -W ignore ./stage_I/train_augment.py --name stage_I_gan_ganFeat_noL1_oneD_Parsing_bz50_parsing20_04222 --dataroot /home/wenwens/Datasets/DeepFashion/paper_img --batchSize 1 --stage 1 --tf_log --no_L1_loss --num_D 1 --no_TV_loss  --no_flip --gpu_ids=0 --parsing_label_nc 20 --continue_train
+
+# test all
 CUDA_VISIBLE_DEVICES=0  python ./rebuttal/test_I_II_multi_pose_penn.py --name I_II --dataroot ./ --pairs_path ./rebuttal/penn_image_list_20180730.txt --stage 123 --gpu_ids=0 --parsing_label_nc 20 --pose_file_path ./rebuttal/penn_pose_sequence_20180730.txt --how_many 50
 
 CUDA_VISIBLE_DEVICES=0  python ./rebuttal/test_I_II.py --name I_II --dataroot ~/Downloads/semantic_align_gan_v9/datasets/deepfashion/paper_images/256/JOINT/deepfasion/00013/id_00000390 --stage 12 --gpu_ids=0 --parsing_label_nc 20 --how_many 80 --pairs_path ./datasets/deepfashion/In-shop_AB_HD_p1024/Anno/my_test_stage_I.txt

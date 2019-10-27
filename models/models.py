@@ -18,6 +18,7 @@ def create_model(opt, name):
         model = Skeleton_Stage_I_Model()
     elif opt.stage == 5:
         from .augment_stage_I_model import Augment_Stage_I_Model
+        # from .augment_stage_I_model_REINFORCE import Augment_Stage_I_Model
         model = Augment_Stage_I_Model()
     else:
         print ("create model ERROR!!!")

@@ -86,6 +86,7 @@ def get_label_tensor(json_path, jpg_path, opt):
     transform_image = get_transform(opt, params)
     points = get_points(json_path)
     label_18chnl_tensor = draw_18chnl_points(points, transform_image)
+
     ### b 18 point show
     label_show = draw_points(points)
     label_show_tensor = transform_image(label_show)

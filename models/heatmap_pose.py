@@ -12,7 +12,8 @@ import cv2
 import pdb
 
 def preprocess(origin_img, image_size):
-    normed_img =  (origin_img - 0.5) / 0.5
+    # normed_img =  (origin_img - 0.5) / 0.5
+    normed_img = origin_img - 0.5
     height, width = image_size
     scale = 368.0 / height  # boxsize
     imgToTest = F.upsample(normed_img, scale_factor=(scale, scale), mode='bicubic')

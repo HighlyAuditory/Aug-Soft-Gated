@@ -5,6 +5,7 @@ from PIL import Image
 import torchvision.transforms as transforms
 import numpy as np
 import random
+import pdb
 
 class BaseDataset(data.Dataset):
     def __init__(self):
@@ -53,7 +54,6 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
         transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
 
     transform_list += [transforms.ToTensor()]
-    # transform_list = [transforms.ToTensor()]
 
     if normalize:
         transform_list += [transforms.Normalize((0.5, 0.5, 0.5),
