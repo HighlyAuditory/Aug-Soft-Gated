@@ -5,7 +5,6 @@ import time
 import numpy as np
 import torch
 import sys
-import pdb
 sys.path.append("/home/wenwens/Downloads/semantic_align_gan_v9")
 
 from collections import OrderedDict
@@ -63,7 +62,6 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         b_parsing_tensor = data['b_parsing_tensor']
         
         infer = save_fake
-        # model.train()
         aug_losses, fake_b_parsing, aug_pose, heatmap = model.module.forward_augment(data)
         print(heatmap.shape)
         kpts = []
@@ -73,7 +71,6 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             kpts.append(np.array([w, h, 0]))
 
         kpts = np.array(kpts).flatten()
-        # pdb.set_trace()
         print("netG_param grad={}".format(model.module.netG.model[-2].bias.grad))
         losses, fake_b_parsing_target = model.module.forward_target(data)
         losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
